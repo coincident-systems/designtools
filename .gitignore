@@ -26,5 +26,8 @@ dist-ssr
 *storybook.log
 storybook-static
 
+# TypeScript build info
+.tsbuildinfo/
+
 # Tauri
 src-tauri/target/
