@@ -47,32 +47,24 @@ function getPageTitle(pathname: string): string {
   return "DesignTools";
 }
 
-// Custom icon for DesignTools (gear + smokestack)
+// Custom icon for DesignTools (gear/cog)
 function DesignToolsIcon({ className }: { className?: string }) {
   return (
     <svg
       viewBox="0 0 24 24"
       fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
       className={className}
     >
-      {/* Smokestack */}
-      <rect x="14" y="8" width="6" height="14" rx="1" />
-      <path d="M17 8V5" />
-      <path d="M15 2c0 1 1 2 2 2s2-1 2-2" />
-      {/* Gear */}
-      <circle cx="8" cy="14" r="3" />
-      <path d="M8 10v-1" />
-      <path d="M8 19v-1" />
-      <path d="M4 14H3" />
-      <path d="M13 14h-1" />
-      <path d="M5.2 11.2l-.7-.7" />
-      <path d="M11.5 17.5l-.7-.7" />
-      <path d="M5.2 16.8l-.7.7" />
-      <path d="M11.5 10.5l-.7.7" />
+      {/* Gear spokes */}
+      <path
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M4.5 12a7.5 7.5 0 0 0 15 0m-15 0a7.5 7.5 0 1 1 15 0m-15 0H3m16.5 0H21m-1.5 0H12m-8.457 3.077 1.41-.513m14.095-5.13 1.41-.513M5.106 17.785l1.15-.964m11.49-9.642 1.149-.964M7.501 19.795l.75-1.3m7.5-12.99.75-1.3m-6.063 16.658.26-1.477m2.605-14.772.26-1.477m0 17.726-.26-1.477M10.698 4.614l-.26-1.477M16.5 19.794l-.75-1.299M7.5 4.205 12 12m6.894 5.785-1.149-.964M6.256 7.178l-1.15-.964m15.352 8.864-1.41-.513M4.954 9.435l-1.41-.514M12.002 12l-3.75 6.495"
+      />
+      {/* Center hub in gold */}
+      <circle cx="12" cy="12" r="2.5" fill="#D4A855"/>
     </svg>
   );
 }
@@ -165,7 +157,7 @@ function DesktopSidebar() {
                     </button>
                   </CollapsibleTrigger>
                   <CollapsibleContent>
-                    <SidebarGroupContent>
+                    <SidebarGroupContent className="pl-10">
                       <SidebarMenu>
                         {section.items.map((item) => {
                           const isActive = location.pathname === item.url;

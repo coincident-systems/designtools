@@ -4,7 +4,10 @@ import { HomePage } from "@/modules/HomePage";
 import { ModulePage } from "@/components/ModulePage";
 import { WorkSamplingCalculator } from "@/modules/work-sampling";
 import { LearningCurvesCalculator } from "@/modules/learning-curves";
-import { NoiseDoseCalculator } from "@/modules/ergonomics";
+import { NoiseDoseCalculator, NIOSHCalculator } from "@/modules/ergonomics";
+import { TimeStudyCalculator } from "@/modules/time-study";
+import { FittsLawTest, StroopTest } from "@/modules/psychology";
+import { BreakEvenCalculator, ParetoChart } from "@/modules/quantitative";
 
 // Generate placeholder pages for all modules
 // These will be replaced with actual implementations
@@ -15,7 +18,9 @@ const TimeStudyPage = () => (
     title="Time Study"
     description="Collect and analyze element times for work measurement"
     vb5Form="frmTimeStudy"
-  />
+  >
+    <TimeStudyCalculator />
+  </ModulePage>
 );
 
 const TimeStudyObservationsPage = () => (
@@ -141,7 +146,9 @@ const NIOSHPage = () => (
     title="NIOSH Lifting Guide"
     description="Calculate recommended weight limit using the NIOSH lifting equation"
     vb5Form="frmNIOSH"
-  />
+  >
+    <NIOSHCalculator />
+  </ModulePage>
 );
 
 const CTDPage = () => (
@@ -192,7 +199,9 @@ const ParetoPage = () => (
     title="Pareto Chart"
     description="Create Pareto analysis charts (80/20 rule)"
     vb5Form="frmPareto"
-  />
+  >
+    <ParetoChart />
+  </ModulePage>
 );
 
 const GanttPage = () => (
@@ -232,7 +241,9 @@ const BreakEvenPage = () => (
     title="Break-Even Analysis"
     description="Calculate break-even point for cost analysis"
     vb5Form="frmBreakEven"
-  />
+  >
+    <BreakEvenCalculator />
+  </ModulePage>
 );
 
 const ValueEngineeringPage = () => (
@@ -249,7 +260,9 @@ const FittsPage = () => (
     title="Fitts' Law Test"
     description="Measure movement time vs. target difficulty"
     vb5Form="frmFittsTest"
-  />
+  >
+    <FittsLawTest />
+  </ModulePage>
 );
 
 const StroopPage = () => (
@@ -257,7 +270,9 @@ const StroopPage = () => (
     title="Stroop Test"
     description="Color-word interference cognitive test"
     vb5Form="frmStroop"
-  />
+  >
+    <StroopTest />
+  </ModulePage>
 );
 
 const SimpleRTPage = () => (
