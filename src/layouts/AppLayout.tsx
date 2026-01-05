@@ -5,7 +5,6 @@ import {
   SidebarContent,
   SidebarGroup,
   SidebarGroupContent,
-  SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
@@ -29,7 +28,7 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { navigation, type NavItem } from "@/config/navigation";
-import { BookOpen, Home, Menu, ChevronDown } from "lucide-react";
+import { Home, Menu, ChevronDown } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
 // Find the current page title from navigation
@@ -48,9 +47,54 @@ function getPageTitle(pathname: string): string {
   return "DesignTools";
 }
 
+// Custom icon for DesignTools (gear + smokestack)
+function DesignToolsIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+    >
+      {/* Smokestack */}
+      <rect x="14" y="8" width="6" height="14" rx="1" />
+      <path d="M17 8V5" />
+      <path d="M15 2c0 1 1 2 2 2s2-1 2-2" />
+      {/* Gear */}
+      <circle cx="8" cy="14" r="3" />
+      <path d="M8 10v-1" />
+      <path d="M8 19v-1" />
+      <path d="M4 14H3" />
+      <path d="M13 14h-1" />
+      <path d="M5.2 11.2l-.7-.7" />
+      <path d="M11.5 17.5l-.7-.7" />
+      <path d="M5.2 16.8l-.7.7" />
+      <path d="M11.5 10.5l-.7.7" />
+    </svg>
+  );
+}
+
 // Desktop Sidebar Navigation
 function DesktopSidebar() {
   const location = useLocation();
+  const [openSection, setOpenSection] = useState<string | null>(null);
+
+  // Auto-open section containing current page
+  useEffect(() => {
+    for (const section of navigation) {
+      if (section.items.some((item) => item.url === location.pathname)) {
+        setOpenSection(section.title);
+        break;
+      }
+    }
+  }, [location.pathname]);
+
+  const toggleSection = (title: string) => {
+    setOpenSection((prev) => (prev === title ? null : title));
+  };
 
   return (
     <Sidebar className="hidden md:flex">
@@ -61,7 +105,7 @@ function DesktopSidebar() {
           aria-label="DesignTools Home"
         >
           <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#E6DBA1] text-[#1a3660]">
-            <BookOpen className="h-5 w-5" aria-hidden="true" />
+            <DesignToolsIcon className="h-5 w-5" aria-hidden="true" />
           </div>
           <div className="flex flex-col">
             <span className="font-['Jost'] font-semibold text-lg text-white">DesignTools</span>
@@ -84,39 +128,71 @@ function DesktopSidebar() {
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarGroup>
-        <Separator className="bg-sidebar-border" />
+        <Separator className="bg-sidebar-border/50" />
         <nav aria-label="Main navigation">
-          {navigation.map((section) => (
-            <SidebarGroup key={section.title}>
-              <SidebarGroupLabel className="text-sidebar-foreground/60 uppercase text-xs tracking-wider">
-                <section.icon className="h-4 w-4 mr-2" aria-hidden="true" />
-                {section.title}
-              </SidebarGroupLabel>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  {section.items.map((item) => {
-                    const isActive = location.pathname === item.url;
-                    return (
-                      <SidebarMenuItem key={item.url}>
-                        <SidebarMenuButton
-                          asChild
-                          isActive={isActive}
-                          tooltip={item.description}
-                        >
-                          <Link
-                            to={item.url}
-                            aria-current={isActive ? "page" : undefined}
-                          >
-                            <span>{item.title}</span>
-                          </Link>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                    );
-                  })}
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
-          ))}
+          {navigation.map((section) => {
+            const isOpen = openSection === section.title;
+            const hasActiveItem = section.items.some(
+              (item) => item.url === location.pathname
+            );
+
+            return (
+              <Collapsible
+                key={section.title}
+                open={isOpen}
+                onOpenChange={() => toggleSection(section.title)}
+              >
+                <SidebarGroup>
+                  <CollapsibleTrigger asChild>
+                    <button
+                      className={`flex items-center justify-between w-full px-3 py-2 text-xs font-medium uppercase tracking-wider transition-colors hover:bg-sidebar-accent/50 rounded-md mx-2 ${
+                        hasActiveItem
+                          ? "text-sidebar-primary"
+                          : "text-sidebar-foreground/60"
+                      }`}
+                      aria-expanded={isOpen}
+                    >
+                      <div className="flex items-center gap-2">
+                        <section.icon className="h-4 w-4" aria-hidden="true" />
+                        {section.title}
+                      </div>
+                      <ChevronDown
+                        className={`h-4 w-4 transition-transform duration-200 ${
+                          isOpen ? "rotate-180" : ""
+                        }`}
+                        aria-hidden="true"
+                      />
+                    </button>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <SidebarGroupContent>
+                      <SidebarMenu>
+                        {section.items.map((item) => {
+                          const isActive = location.pathname === item.url;
+                          return (
+                            <SidebarMenuItem key={item.url}>
+                              <SidebarMenuButton
+                                asChild
+                                isActive={isActive}
+                                tooltip={item.description}
+                              >
+                                <Link
+                                  to={item.url}
+                                  aria-current={isActive ? "page" : undefined}
+                                >
+                                  <span>{item.title}</span>
+                                </Link>
+                              </SidebarMenuButton>
+                            </SidebarMenuItem>
+                          );
+                        })}
+                      </SidebarMenu>
+                    </SidebarGroupContent>
+                  </CollapsibleContent>
+                </SidebarGroup>
+              </Collapsible>
+            );
+          })}
         </nav>
       </SidebarContent>
     </Sidebar>
@@ -166,7 +242,7 @@ function MobileNav() {
         <SheetHeader className="px-4 pb-2 border-b">
           <div className="flex items-center justify-between">
             <SheetTitle className="flex items-center gap-2 font-['Jost']">
-              <BookOpen className="h-5 w-5 text-primary" />
+              <DesignToolsIcon className="h-5 w-5 text-primary" />
               DesignTools
             </SheetTitle>
           </div>

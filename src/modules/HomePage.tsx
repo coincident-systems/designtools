@@ -10,7 +10,7 @@ function ToolCard({ section }: { section: (typeof navigation)[0] }) {
       {/* Header */}
       <div className="flex items-center gap-3.5 mb-4">
         {/* Icon with gold background */}
-        <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-accent/25 text-primary">
+        <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-accent/25 text-primary dark:text-accent">
           <section.icon className="h-6 w-6" />
         </div>
 

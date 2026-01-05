@@ -119,27 +119,8 @@ body {
   background: linear-gradient(180deg, #091322 0%, #0d1a2d 100%) !important;
 }
 
-/* Sidebar section labels with gold accent */
-[data-sidebar="group-label"] {
-  position: relative;
-  padding-left: 1.25rem !important;
-}
-
-[data-sidebar="group-label"]::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 12px;
-  height: 2px;
-  background: #E6DBA1;
-  border-radius: 1px;
-}
-
-/* Active nav item with gold left border */
+/* Active nav item styling */
 [data-sidebar="menu-button"][data-active="true"] {
-  border-left: 3px solid #E6DBA1 !important;
   background: #3d6db0 !important;
 }
 
