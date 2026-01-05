@@ -54,18 +54,18 @@ function DesktopSidebar() {
 
   return (
     <Sidebar className="hidden md:flex">
-      <SidebarHeader className="border-b border-sidebar-border px-4 py-4">
+      <SidebarHeader className="border-b border-sidebar-border/50 px-5 py-5">
         <Link
           to="/"
           className="flex items-center gap-3 hover:opacity-80 transition-opacity"
           aria-label="DesignTools Home"
         >
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#E6DBA1] text-[#1a3660]">
             <BookOpen className="h-5 w-5" aria-hidden="true" />
           </div>
           <div className="flex flex-col">
-            <span className="font-semibold text-lg">DesignTools</span>
-            <span className="text-xs text-sidebar-foreground/60">
+            <span className="font-['Jost'] font-semibold text-lg text-white">DesignTools</span>
+            <span className="text-xs text-white/60">
               Methods, Standards & Work Design
             </span>
           </div>
@@ -165,7 +165,7 @@ function MobileNav() {
 
         <SheetHeader className="px-4 pb-2 border-b">
           <div className="flex items-center justify-between">
-            <SheetTitle className="flex items-center gap-2">
+            <SheetTitle className="flex items-center gap-2 font-['Jost']">
               <BookOpen className="h-5 w-5 text-primary" />
               DesignTools
             </SheetTitle>
