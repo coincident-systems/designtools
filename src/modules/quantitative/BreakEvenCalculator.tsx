@@ -1,53 +1,54 @@
 import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Calculator, DollarSign, TrendingUp, Info, AlertTriangle, CheckCircle } from "lucide-react";
+import { DollarSign, TrendingUp, Info, AlertTriangle, CheckCircle } from "lucide-react";
+import {
+  FormInput,
+  CalculateButton,
+  HelpPanel,
+} from "@/components/forms";
+import { breakEvenSchema, type BreakEvenInput } from "@/schemas";
 import {
   calculateBreakEven,
   generateBreakEvenChartData,
   calculateProfitAtQuantity,
   calculateMarginOfSafety,
   formatCurrency,
-  type BreakEvenInputs,
   type BreakEvenResult,
   type BreakEvenChartPoint,
 } from "@/utils/calculations/break-even";
 
 export function BreakEvenCalculator() {
-  const [inputs, setInputs] = useState<BreakEvenInputs>({
-    fixedCosts: 50000,
-    variableCostPerUnit: 25,
-    sellingPricePerUnit: 50,
-    targetProfit: 20000,
-  });
-  const [currentQuantity, setCurrentQuantity] = useState("2000");
   const [result, setResult] = useState<BreakEvenResult | null>(null);
   const [chartData, setChartData] = useState<BreakEvenChartPoint[]>([]);
 
-  const handleCalculate = () => {
-    const calcResult = calculateBreakEven(inputs);
+  const form = useForm<BreakEvenInput>({
+    resolver: zodResolver(breakEvenSchema) as any,
+    defaultValues: {
+      fixedCosts: 50000,
+      variableCostPerUnit: 25,
+      sellingPricePerUnit: 50,
+      targetProfit: 20000,
+    },
+  });
+
+  const handleSubmit = form.handleSubmit((data) => {
+    const calcResult = calculateBreakEven(data);
     setResult(calcResult);
 
-    const data = generateBreakEvenChartData(inputs);
-    setChartData(data);
-  };
+    const chartPoints = generateBreakEvenChartData(data);
+    setChartData(chartPoints);
+  });
 
-  const updateInput = (field: keyof BreakEvenInputs, value: string) => {
-    const numValue = parseFloat(value) || 0;
-    setInputs((prev) => ({ ...prev, [field]: numValue }));
-  };
-
-  const currentQty = parseFloat(currentQuantity) || 0;
-  const currentProfit = result ? calculateProfitAtQuantity(inputs, currentQty) : 0;
-  const marginOfSafety = result && result.isViable
-    ? calculateMarginOfSafety(currentQty, result.breakEvenQuantity)
-    : 0;
+  const currentQty = form.watch("currentQuantity") || 0;
+  const currentProfit = result ? calculateProfitAtQuantity(form.getValues(), currentQty) : 0;
+  const marginOfSafety =
+    result && result.isViable ? calculateMarginOfSafety(currentQty, result.breakEvenQuantity) : 0;
 
   return (
-    <div className="space-y-6">
+    <form onSubmit={handleSubmit} className="space-y-6">
       {/* Introduction */}
       <Card>
         <CardHeader className="pb-3">
@@ -75,86 +76,58 @@ export function BreakEvenCalculator() {
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="fixedCosts">Fixed Costs ($)</Label>
-              <Input
-                id="fixedCosts"
-                type="number"
-                min="0"
-                value={inputs.fixedCosts}
-                onChange={(e) => updateInput("fixedCosts", e.target.value)}
-              />
-              <p className="text-xs text-muted-foreground">
-                Rent, salaries, insurance, equipment costs
-              </p>
-            </div>
+            <FormInput
+              label="Fixed Costs"
+              type="number"
+              unit="$"
+              hint="Rent, salaries, insurance, equipment costs"
+              error={form.formState.errors.fixedCosts?.message}
+              {...form.register("fixedCosts", { valueAsNumber: true })}
+            />
 
-            <div className="space-y-2">
-              <Label htmlFor="variableCost">Variable Cost per Unit ($)</Label>
-              <Input
-                id="variableCost"
-                type="number"
-                min="0"
-                step="0.01"
-                value={inputs.variableCostPerUnit}
-                onChange={(e) => updateInput("variableCostPerUnit", e.target.value)}
-              />
-              <p className="text-xs text-muted-foreground">
-                Materials, direct labor, packaging per unit
-              </p>
-            </div>
+            <FormInput
+              label="Variable Cost per Unit"
+              type="number"
+              unit="$"
+              step="0.01"
+              hint="Materials, direct labor per unit"
+              error={form.formState.errors.variableCostPerUnit?.message}
+              {...form.register("variableCostPerUnit", { valueAsNumber: true })}
+            />
 
-            <div className="space-y-2">
-              <Label htmlFor="sellingPrice">Selling Price per Unit ($)</Label>
-              <Input
-                id="sellingPrice"
-                type="number"
-                min="0"
-                step="0.01"
-                value={inputs.sellingPricePerUnit}
-                onChange={(e) => updateInput("sellingPricePerUnit", e.target.value)}
-              />
-              <p className="text-xs text-muted-foreground">
-                Revenue received per unit sold
-              </p>
-            </div>
+            <FormInput
+              label="Selling Price per Unit"
+              type="number"
+              unit="$"
+              step="0.01"
+              hint="Revenue received per unit sold"
+              error={form.formState.errors.sellingPricePerUnit?.message}
+              {...form.register("sellingPricePerUnit", { valueAsNumber: true })}
+            />
 
-            <div className="space-y-2">
-              <Label htmlFor="targetProfit">Target Profit ($)</Label>
-              <Input
-                id="targetProfit"
-                type="number"
-                min="0"
-                value={inputs.targetProfit || ""}
-                onChange={(e) => updateInput("targetProfit", e.target.value)}
-              />
-              <p className="text-xs text-muted-foreground">
-                Optional: desired profit amount
-              </p>
-            </div>
+            <FormInput
+              label="Target Profit"
+              type="number"
+              unit="$"
+              hint="Optional: desired profit amount"
+              error={form.formState.errors.targetProfit?.message}
+              {...form.register("targetProfit", { valueAsNumber: true })}
+            />
           </div>
 
           <Separator />
 
-          <div className="space-y-2">
-            <Label htmlFor="currentQuantity">Current/Projected Sales (units)</Label>
-            <Input
-              id="currentQuantity"
-              type="number"
-              min="0"
-              value={currentQuantity}
-              onChange={(e) => setCurrentQuantity(e.target.value)}
-              className="max-w-xs"
-            />
-            <p className="text-xs text-muted-foreground">
-              Enter current or projected sales to calculate margin of safety
-            </p>
-          </div>
+          <FormInput
+            label="Current/Projected Sales"
+            type="number"
+            unit="units"
+            hint="Enter current or projected sales to calculate margin of safety"
+            error={form.formState.errors.currentQuantity?.message}
+            {...form.register("currentQuantity", { valueAsNumber: true })}
+            className="max-w-xs"
+          />
 
-          <Button onClick={handleCalculate} className="w-full md:w-auto">
-            <Calculator className="mr-2 h-4 w-4" />
-            Calculate Break-Even
-          </Button>
+          <CalculateButton type="submit">Calculate Break-Even</CalculateButton>
         </CardContent>
       </Card>
 
@@ -225,7 +198,9 @@ export function BreakEvenCalculator() {
                 {/* Target Profit */}
                 {result.targetProfitQuantity && (
                   <div className="p-4 rounded-lg bg-accent/10 border border-accent/20">
-                    <h4 className="font-medium mb-2">Target Profit: {formatCurrency(inputs.targetProfit || 0)}</h4>
+                    <h4 className="font-medium mb-2">
+                      Target Profit: {formatCurrency(form.watch("targetProfit") || 0)}
+                    </h4>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <div className="text-sm text-muted-foreground">Required Quantity</div>
@@ -355,9 +330,21 @@ export function BreakEvenCalculator() {
                 <div className="bg-muted/50 rounded-lg p-4">
                   <h4 className="font-medium mb-2">Formulas</h4>
                   <div className="text-sm font-mono space-y-1">
-                    <p>Contribution Margin = Selling Price - Variable Cost = ${inputs.sellingPricePerUnit} - ${inputs.variableCostPerUnit} = ${result.contributionMargin.toFixed(2)}</p>
-                    <p>Break-Even Quantity = Fixed Costs / CM = ${inputs.fixedCosts.toLocaleString()} / ${result.contributionMargin.toFixed(2)} = {result.breakEvenQuantity.toFixed(1)} units</p>
-                    <p>Break-Even Revenue = BEQ × Price = {result.breakEvenQuantity.toFixed(1)} × ${inputs.sellingPricePerUnit} = {formatCurrency(result.breakEvenRevenue)}</p>
+                    <p>
+                      Contribution Margin = Selling Price - Variable Cost = $
+                      {form.watch("sellingPricePerUnit")} - ${form.watch("variableCostPerUnit")} = $
+                      {result.contributionMargin.toFixed(2)}
+                    </p>
+                    <p>
+                      Break-Even Quantity = Fixed Costs / CM = $
+                      {form.watch("fixedCosts").toLocaleString()} / $
+                      {result.contributionMargin.toFixed(2)} = {result.breakEvenQuantity.toFixed(1)}{" "}
+                      units
+                    </p>
+                    <p>
+                      Break-Even Revenue = BEQ × Price = {result.breakEvenQuantity.toFixed(1)} × $
+                      {form.watch("sellingPricePerUnit")} = {formatCurrency(result.breakEvenRevenue)}
+                    </p>
                   </div>
                 </div>
               </>
@@ -388,6 +375,31 @@ export function BreakEvenCalculator() {
           </div>
         </CardContent>
       </Card>
-    </div>
+
+      {/* Help Panel */}
+      <HelpPanel title="Break-Even Analysis">
+        <HelpPanel.Formula>
+          <div className="space-y-2">
+            <p>
+              <strong>Break-Even Quantity (BEQ)</strong> = Fixed Costs / Contribution Margin
+            </p>
+            <p>
+              <strong>Contribution Margin (CM)</strong> = Selling Price - Variable Cost per Unit
+            </p>
+            <p>
+              <strong>CM Ratio</strong> = (CM / Selling Price) × 100
+            </p>
+            <p>
+              <strong>Target Profit Quantity</strong> = (Fixed Costs + Target Profit) / CM
+            </p>
+          </div>
+        </HelpPanel.Formula>
+
+        <HelpPanel.Reference>
+          Horngren, C. T., Datar, S. M., & Rajan, M. V. (2015).{" "}
+          <em>Cost Accounting: A Managerial Emphasis</em> (15th ed.). Pearson.
+        </HelpPanel.Reference>
+      </HelpPanel>
+    </form>
   );
 }
