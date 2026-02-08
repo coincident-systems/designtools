@@ -63,8 +63,8 @@ function DesignToolsIcon({ className }: { className?: string }) {
         strokeLinejoin="round"
         d="M4.5 12a7.5 7.5 0 0 0 15 0m-15 0a7.5 7.5 0 1 1 15 0m-15 0H3m16.5 0H21m-1.5 0H12m-8.457 3.077 1.41-.513m14.095-5.13 1.41-.513M5.106 17.785l1.15-.964m11.49-9.642 1.149-.964M7.501 19.795l.75-1.3m7.5-12.99.75-1.3m-6.063 16.658.26-1.477m2.605-14.772.26-1.477m0 17.726-.26-1.477M10.698 4.614l-.26-1.477M16.5 19.794l-.75-1.299M7.5 4.205 12 12m6.894 5.785-1.149-.964M6.256 7.178l-1.15-.964m15.352 8.864-1.41-.513M4.954 9.435l-1.41-.514M12.002 12l-3.75 6.495"
       />
-      {/* Center hub in gold */}
-      <circle cx="12" cy="12" r="2.5" fill="#D4A855"/>
+      {/* Center hub in MSU Gold */}
+      <circle cx="12" cy="12" r="2.5" fill="#f4b425"/>
     </svg>
   );
 }
@@ -96,7 +96,7 @@ function DesktopSidebar() {
           className="flex items-center gap-3 hover:opacity-80 transition-opacity"
           aria-label="DesignTools Home"
         >
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#E6DBA1] text-[#1a3660]">
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#f4b425] text-[#162960]">
             <DesignToolsIcon className="h-5 w-5" aria-hidden="true" />
           </div>
           <div className="flex flex-col">

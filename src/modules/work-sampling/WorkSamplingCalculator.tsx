@@ -1,17 +1,22 @@
-import { useState, useMemo } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
-import { Calculator, Shuffle } from "lucide-react";
+  FormInput,
+  FormSelect,
+  FormFrame,
+  ResultsDisplay,
+  CalculateButton,
+  HelpPanel,
+} from "@/components/forms";
+import {
+  workSamplingSampleSizeSchema,
+  workSamplingErrorLimitSchema,
+  workSamplingRandomTimesSchema,
+  type WorkSamplingSampleSizeInput,
+  type WorkSamplingErrorLimitInput,
+  type WorkSamplingRandomTimesInput,
+} from "@/schemas";
 import {
   CONFIDENCE_LEVELS,
   getZValue,
@@ -20,453 +25,236 @@ import {
   generateRandomObservationTimes,
   formatErrorAsPercentage,
 } from "@/utils/calculations/work-sampling";
+import { Shuffle } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 export function WorkSamplingCalculator() {
-  // Sample Size Calculator state
-  const [sampleSizeInputs, setSampleSizeInputs] = useState({
-    p: "0.5",
-    confidence: "0.95",
-    errorLimit: "0.05",
+  // Sample Size Calculator
+  const sampleSizeForm = useForm<WorkSamplingSampleSizeInput>({
+    resolver: zodResolver(workSamplingSampleSizeSchema),
+    defaultValues: {
+      proportion: 0.5,
+      confidence: "0.95",
+      errorLimit: 0.05,
+    },
   });
+
   const [sampleSizeResult, setSampleSizeResult] = useState<number | null>(null);
-  const [sampleSizeError, setSampleSizeError] = useState<string | null>(null);
 
-  // Error Limit Calculator state
-  const [errorLimitInputs, setErrorLimitInputs] = useState({
-    p: "0.5",
-    confidence: "0.95",
-    sampleSize: "384",
+  const handleCalculateSampleSize = sampleSizeForm.handleSubmit((data) => {
+    const z = getZValue(data.confidence);
+    const result = calculateSampleSize(data.proportion, z, data.errorLimit);
+    setSampleSizeResult(result);
   });
+
+  // Error Limit Calculator
+  const errorLimitForm = useForm<WorkSamplingErrorLimitInput>({
+    resolver: zodResolver(workSamplingErrorLimitSchema),
+    defaultValues: {
+      proportion: 0.5,
+      confidence: "0.95",
+      sampleSize: 384,
+    },
+  });
+
   const [errorLimitResult, setErrorLimitResult] = useState<number | null>(null);
-  const [errorLimitError, setErrorLimitError] = useState<string | null>(null);
 
-  // Random Times Generator state
-  const [observationCount, setObservationCount] = useState("10");
+  const handleCalculateErrorLimit = errorLimitForm.handleSubmit((data) => {
+    const z = getZValue(data.confidence);
+    const result = calculateErrorLimit(data.proportion, z, data.sampleSize);
+    setErrorLimitResult(result);
+  });
+
+  // Random Times Generator
+  const randomTimesForm = useForm<WorkSamplingRandomTimesInput>({
+    resolver: zodResolver(workSamplingRandomTimesSchema),
+    defaultValues: {
+      count: 10,
+      startHour: 8,
+      endHour: 17,
+    },
+  });
+
   const [randomTimes, setRandomTimes] = useState<string[]>([]);
-  const [randomTimesError, setRandomTimesError] = useState<string | null>(null);
 
-  // Derived z-values for display
-  const sampleSizeZ = useMemo(
-    () => getZValue(sampleSizeInputs.confidence),
-    [sampleSizeInputs.confidence]
-  );
-  const errorLimitZ = useMemo(
-    () => getZValue(errorLimitInputs.confidence),
-    [errorLimitInputs.confidence]
-  );
+  const handleGenerateRandomTimes = randomTimesForm.handleSubmit((data) => {
+    const times = generateRandomObservationTimes(data.count, data.startHour, data.endHour);
+    setRandomTimes(times);
+  });
 
-  const handleCalculateSampleSize = () => {
-    setSampleSizeError(null);
-    try {
-      const p = parseFloat(sampleSizeInputs.p);
-      const l = parseFloat(sampleSizeInputs.errorLimit);
-
-      if (isNaN(p)) {
-        setSampleSizeError("Please enter a valid probability");
-        setSampleSizeResult(null);
-        return;
-      }
-      if (isNaN(l)) {
-        setSampleSizeError("Please enter a valid error limit");
-        setSampleSizeResult(null);
-        return;
-      }
-
-      const result = calculateSampleSize(p, sampleSizeZ, l);
-      setSampleSizeResult(result);
-    } catch (err) {
-      setSampleSizeError(err instanceof Error ? err.message : "Calculation error");
-      setSampleSizeResult(null);
-    }
-  };
-
-  const handleCalculateErrorLimit = () => {
-    setErrorLimitError(null);
-    try {
-      const p = parseFloat(errorLimitInputs.p);
-      const n = parseInt(errorLimitInputs.sampleSize, 10);
-
-      if (isNaN(p)) {
-        setErrorLimitError("Please enter a valid probability");
-        setErrorLimitResult(null);
-        return;
-      }
-      if (isNaN(n)) {
-        setErrorLimitError("Please enter a valid sample size");
-        setErrorLimitResult(null);
-        return;
-      }
-
-      const result = calculateErrorLimit(p, errorLimitZ, n);
-      setErrorLimitResult(result);
-    } catch (err) {
-      setErrorLimitError(err instanceof Error ? err.message : "Calculation error");
-      setErrorLimitResult(null);
-    }
-  };
-
-  const handleGenerateRandomTimes = () => {
-    setRandomTimesError(null);
-    try {
-      const count = parseInt(observationCount, 10);
-
-      if (isNaN(count)) {
-        setRandomTimesError("Please enter a valid number");
-        setRandomTimes([]);
-        return;
-      }
-
-      const times = generateRandomObservationTimes(count);
-      setRandomTimes(times);
-    } catch (err) {
-      setRandomTimesError(err instanceof Error ? err.message : "Generation error");
-      setRandomTimes([]);
-    }
-  };
+  const watchedSSConfidence = sampleSizeForm.watch("confidence");
+  const watchedELConfidence = errorLimitForm.watch("confidence");
+  const sampleSizeZ = getZValue(watchedSSConfidence);
+  const errorLimitZ = getZValue(watchedELConfidence);
 
   return (
     <div className="space-y-6">
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Calculate Sample Size (n) */}
-        <Card>
-          <CardHeader className="pb-4">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <span className="text-primary">Calculate Sample Size</span>
-              <span className="text-muted-foreground font-normal text-base italic">
-                (n)
-              </span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid gap-1.5">
-              <Label htmlFor="ss-p">
-                Probability of occurrence{" "}
-                <span className="italic text-muted-foreground">(p)</span>
-              </Label>
-              <Input
-                id="ss-p"
-                type="number"
-                min="0"
-                max="1"
-                step="0.01"
-                placeholder="0.50"
-                value={sampleSizeInputs.p}
-                onChange={(e) =>
-                  setSampleSizeInputs((prev) => ({ ...prev, p: e.target.value }))
-                }
-                aria-describedby="ss-p-hint"
+        <form onSubmit={handleCalculateSampleSize}>
+          <FormFrame title="Calculate Sample Size" description="Determine required observations">
+            <FormInput
+              label="Probability (p)"
+              type="number"
+              step="0.01"
+              placeholder="0.50"
+              hint="Enter a value between 0 and 1 (e.g., 0.5 for 50%)"
+              error={sampleSizeForm.formState.errors.proportion?.message}
+              {...sampleSizeForm.register("proportion", { valueAsNumber: true })}
+            />
+
+            <FormSelect
+              label="Confidence Level"
+              options={CONFIDENCE_LEVELS.map((l) => ({ value: l.value, label: l.label }))}
+              value={watchedSSConfidence}
+              onValueChange={(v) => sampleSizeForm.setValue("confidence", v as any)}
+              error={sampleSizeForm.formState.errors.confidence?.message}
+            />
+
+            <FormInput
+              label="z-Value"
+              type="text"
+              value={sampleSizeZ.toFixed(3)}
+              disabled
+              hint="Computed from confidence level"
+            />
+
+            <FormInput
+              label="Error Limit (l)"
+              type="number"
+              step="0.01"
+              placeholder="0.05"
+              hint="Enter as decimal (e.g., 0.05 for ±5%)"
+              error={sampleSizeForm.formState.errors.errorLimit?.message}
+              {...sampleSizeForm.register("errorLimit", { valueAsNumber: true })}
+            />
+
+            <CalculateButton type="submit" fullWidth>
+              Calculate Sample Size
+            </CalculateButton>
+
+            {sampleSizeResult !== null && (
+              <ResultsDisplay
+                title="Required Sample Size"
+                items={[
+                  { label: "n", value: sampleSizeResult.toLocaleString(), status: "success" },
+                ]}
               />
-              <p id="ss-p-hint" className="text-xs text-muted-foreground">
-                Enter a value between 0 and 1 (e.g., 0.5 for 50%)
-              </p>
-            </div>
-
-            <div className="grid gap-1.5">
-              <Label htmlFor="ss-confidence">
-                Confidence Level{" "}
-                <span className="italic text-muted-foreground">(1 - α)</span>
-              </Label>
-              <Select
-                value={sampleSizeInputs.confidence}
-                onValueChange={(v) =>
-                  setSampleSizeInputs((prev) => ({ ...prev, confidence: v }))
-                }
-              >
-                <SelectTrigger id="ss-confidence" aria-label="Select confidence level">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {CONFIDENCE_LEVELS.map((level) => (
-                    <SelectItem key={level.value} value={level.value}>
-                      {level.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="grid gap-1.5">
-              <Label className="text-muted-foreground" id="ss-z-label">
-                z-Value corresponding to (1 - α)
-              </Label>
-              <div
-                className="h-10 px-3 py-2 rounded-md border bg-muted text-right font-mono"
-                aria-labelledby="ss-z-label"
-                role="status"
-              >
-                {sampleSizeZ.toFixed(3)}
-              </div>
-            </div>
-
-            <div className="grid gap-1.5">
-              <Label htmlFor="ss-error">
-                Maximum Limit of Error{" "}
-                <span className="italic text-muted-foreground">(l)</span>
-              </Label>
-              <Input
-                id="ss-error"
-                type="number"
-                min="0.001"
-                max="1"
-                step="0.01"
-                placeholder="0.05"
-                value={sampleSizeInputs.errorLimit}
-                onChange={(e) =>
-                  setSampleSizeInputs((prev) => ({
-                    ...prev,
-                    errorLimit: e.target.value,
-                  }))
-                }
-                aria-describedby="ss-error-hint"
-              />
-              <p id="ss-error-hint" className="text-xs text-muted-foreground">
-                Enter as decimal (e.g., 0.05 for ±5%)
-              </p>
-            </div>
-
-            <Separator />
-
-            <Button
-              onClick={handleCalculateSampleSize}
-              className="w-full"
-              data-testid="calculate-sample-size"
-            >
-              <Calculator className="mr-2 h-4 w-4" aria-hidden="true" />
-              Calculate
-            </Button>
-
-            {sampleSizeError && (
-              <div
-                className="p-4 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-sm"
-                role="alert"
-              >
-                {sampleSizeError}
-              </div>
             )}
-
-            {sampleSizeResult !== null && !sampleSizeError && (
-              <div
-                className="p-4 rounded-lg bg-primary/10 border border-primary/20"
-                role="status"
-                aria-live="polite"
-                data-testid="sample-size-result"
-              >
-                <div className="text-sm text-muted-foreground mb-1">
-                  Required Sample Size
-                </div>
-                <div className="text-2xl font-bold text-primary">
-                  n = {sampleSizeResult.toLocaleString()}
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+          </FormFrame>
+        </form>
 
         {/* Calculate Error Limit (l) */}
-        <Card>
-          <CardHeader className="pb-4">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <span className="text-primary">Calculate Error Limit</span>
-              <span className="text-muted-foreground font-normal text-base italic">
-                (l)
-              </span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid gap-1.5">
-              <Label htmlFor="el-p">
-                Probability of occurrence{" "}
-                <span className="italic text-muted-foreground">(p)</span>
-              </Label>
-              <Input
-                id="el-p"
-                type="number"
-                min="0"
-                max="1"
-                step="0.01"
-                placeholder="0.50"
-                value={errorLimitInputs.p}
-                onChange={(e) =>
-                  setErrorLimitInputs((prev) => ({ ...prev, p: e.target.value }))
-                }
-                aria-describedby="el-p-hint"
+        <form onSubmit={handleCalculateErrorLimit}>
+          <FormFrame title="Calculate Error Limit" description="Determine achievable precision">
+            <FormInput
+              label="Probability (p)"
+              type="number"
+              step="0.01"
+              placeholder="0.50"
+              hint="Enter a value between 0 and 1"
+              error={errorLimitForm.formState.errors.proportion?.message}
+              {...errorLimitForm.register("proportion", { valueAsNumber: true })}
+            />
+
+            <FormSelect
+              label="Confidence Level"
+              options={CONFIDENCE_LEVELS.map((l) => ({ value: l.value, label: l.label }))}
+              value={watchedELConfidence}
+              onValueChange={(v) => errorLimitForm.setValue("confidence", v as any)}
+              error={errorLimitForm.formState.errors.confidence?.message}
+            />
+
+            <FormInput
+              label="z-Value"
+              type="text"
+              value={errorLimitZ.toFixed(3)}
+              disabled
+              hint="Computed from confidence level"
+            />
+
+            <FormInput
+              label="Sample Size (n)"
+              type="number"
+              placeholder="384"
+              hint="Number of observations in the study"
+              error={errorLimitForm.formState.errors.sampleSize?.message}
+              {...errorLimitForm.register("sampleSize", { valueAsNumber: true })}
+            />
+
+            <CalculateButton type="submit" fullWidth>
+              Calculate Error Limit
+            </CalculateButton>
+
+            {errorLimitResult !== null && (
+              <ResultsDisplay
+                title="Maximum Error Limit"
+                items={[
+                  {
+                    label: "l",
+                    value: formatErrorAsPercentage(errorLimitResult),
+                    status: "success",
+                  },
+                  { label: "Decimal", value: errorLimitResult.toFixed(4) },
+                ]}
               />
-              <p id="el-p-hint" className="text-xs text-muted-foreground">
-                Enter a value between 0 and 1 (e.g., 0.5 for 50%)
-              </p>
-            </div>
-
-            <div className="grid gap-1.5">
-              <Label htmlFor="el-confidence">
-                Confidence Level{" "}
-                <span className="italic text-muted-foreground">(1 - α)</span>
-              </Label>
-              <Select
-                value={errorLimitInputs.confidence}
-                onValueChange={(v) =>
-                  setErrorLimitInputs((prev) => ({ ...prev, confidence: v }))
-                }
-              >
-                <SelectTrigger id="el-confidence" aria-label="Select confidence level">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {CONFIDENCE_LEVELS.map((level) => (
-                    <SelectItem key={level.value} value={level.value}>
-                      {level.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="grid gap-1.5">
-              <Label className="text-muted-foreground" id="el-z-label">
-                z-Value corresponding to (1 - α)
-              </Label>
-              <div
-                className="h-10 px-3 py-2 rounded-md border bg-muted text-right font-mono"
-                aria-labelledby="el-z-label"
-                role="status"
-              >
-                {errorLimitZ.toFixed(3)}
-              </div>
-            </div>
-
-            <div className="grid gap-1.5">
-              <Label htmlFor="el-n">
-                Sample Size{" "}
-                <span className="italic text-muted-foreground">(n)</span>
-              </Label>
-              <Input
-                id="el-n"
-                type="number"
-                min="1"
-                step="1"
-                placeholder="384"
-                value={errorLimitInputs.sampleSize}
-                onChange={(e) =>
-                  setErrorLimitInputs((prev) => ({
-                    ...prev,
-                    sampleSize: e.target.value,
-                  }))
-                }
-                aria-describedby="el-n-hint"
-              />
-              <p id="el-n-hint" className="text-xs text-muted-foreground">
-                Number of observations in the study
-              </p>
-            </div>
-
-            <Separator />
-
-            <Button
-              onClick={handleCalculateErrorLimit}
-              className="w-full"
-              data-testid="calculate-error-limit"
-            >
-              <Calculator className="mr-2 h-4 w-4" aria-hidden="true" />
-              Calculate
-            </Button>
-
-            {errorLimitError && (
-              <div
-                className="p-4 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-sm"
-                role="alert"
-              >
-                {errorLimitError}
-              </div>
             )}
-
-            {errorLimitResult !== null && !errorLimitError && (
-              <div
-                className="p-4 rounded-lg bg-secondary/10 border border-secondary/20"
-                role="status"
-                aria-live="polite"
-                data-testid="error-limit-result"
-              >
-                <div className="text-sm text-muted-foreground mb-1">
-                  Maximum Error Limit
-                </div>
-                <div className="text-2xl font-bold text-secondary">
-                  l = {formatErrorAsPercentage(errorLimitResult)}
-                </div>
-                <div className="text-sm text-muted-foreground mt-1">
-                  ({errorLimitResult.toFixed(4)})
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+          </FormFrame>
+        </form>
       </div>
 
-      {/* Generate Random Sampling Times */}
-      <Card>
-        <CardHeader className="pb-4">
-          <CardTitle className="text-lg text-primary">
-            Generate Random Observation Times
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="grid gap-1.5 flex-1">
-              <Label htmlFor="obs-count">Number of Observations</Label>
-              <Input
-                id="obs-count"
-                type="number"
-                min="1"
-                max="1000"
-                placeholder="10"
-                value={observationCount}
-                onChange={(e) => setObservationCount(e.target.value)}
-                aria-describedby="obs-count-hint"
-              />
-              <p id="obs-count-hint" className="text-xs text-muted-foreground">
-                Maximum 1000 observations
-              </p>
-            </div>
-            <div className="flex items-end">
-              <Button
-                onClick={handleGenerateRandomTimes}
-                variant="secondary"
-                data-testid="generate-times"
-              >
-                <Shuffle className="mr-2 h-4 w-4" aria-hidden="true" />
-                Generate
-              </Button>
-            </div>
+      {/* Generate Random Observation Times */}
+      <form onSubmit={handleGenerateRandomTimes}>
+        <FormFrame title="Generate Random Observation Times" columns={2}>
+          <FormInput
+            label="Number of Observations"
+            type="number"
+            placeholder="10"
+            hint="Maximum 10,000 observations"
+            error={randomTimesForm.formState.errors.count?.message}
+            {...randomTimesForm.register("count", { valueAsNumber: true })}
+          />
+
+          <div className="flex items-end">
+            <Button type="submit" variant="secondary" className="w-full">
+              <Shuffle className="mr-2 h-4 w-4" aria-hidden="true" />
+              Generate
+            </Button>
           </div>
 
-          {randomTimesError && (
-            <div
-              className="mt-4 p-4 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-sm"
-              role="alert"
-            >
-              {randomTimesError}
+          {randomTimes.length > 0 && (
+            <div className="col-span-2">
+              <ResultsDisplay title={`${randomTimes.length} Random Times (8:00 AM - 5:00 PM)`}>
+                <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2 font-mono text-sm">
+                  {randomTimes.map((time, i) => (
+                    <div key={i} className="text-center">
+                      <span className="text-muted-foreground mr-1">{i + 1}.</span>
+                      {time}
+                    </div>
+                  ))}
+                </div>
+              </ResultsDisplay>
             </div>
           )}
+        </FormFrame>
+      </form>
 
-          {randomTimes.length > 0 && !randomTimesError && (
-            <div className="mt-4" data-testid="random-times-result">
-              <div className="text-sm text-muted-foreground mb-2">
-                Random observation times (8:00 AM - 5:00 PM):
-              </div>
-              <div
-                className="p-4 rounded-lg bg-muted font-mono text-sm grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2"
-                role="list"
-                aria-label="Generated observation times"
-              >
-                {randomTimes.map((time, i) => (
-                  <div key={i} className="text-center" role="listitem">
-                    <span className="text-muted-foreground mr-1">{i + 1}.</span>
-                    {time}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      <HelpPanel title="About Work Sampling">
+        <p>
+          Work sampling is an indirect work measurement technique that involves taking random
+          observations of workers to determine the proportion of time spent on various activities.
+        </p>
+        <HelpPanel.Formula label="Sample Size Formula">
+          n = z² × p × (1 - p) / l²
+        </HelpPanel.Formula>
+        <p>
+          Where <strong>z</strong> is the z-value for the confidence level, <strong>p</strong> is
+          the estimated proportion, and <strong>l</strong> is the desired error limit.
+        </p>
+        <HelpPanel.Reference>
+          Niebel & Freivalds, "Methods, Standards, and Work Design", Ch. 13
+        </HelpPanel.Reference>
+      </HelpPanel>
     </div>
   );
 }

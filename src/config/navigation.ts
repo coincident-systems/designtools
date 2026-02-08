@@ -71,18 +71,8 @@ export const navigation: NavSection[] = [
         vb5Form: "frmLCMain",
         description: "Learning curve analysis methods",
       },
-      {
-        title: "Two-Point Method",
-        url: "/learning-curves/two-point",
-        vb5Form: "frmLCTpt",
-        description: "Calculate learning rate from two data points",
-      },
-      {
-        title: "Regression Method",
-        url: "/learning-curves/regression",
-        vb5Form: "frmLCReg",
-        description: "Least squares regression analysis",
-      },
+      // Two-Point and Regression methods are handled inline
+      // by the LearningCurvesCalculator via tab toggle on /learning-curves
       {
         title: "Graph",
         url: "/learning-curves/graph",

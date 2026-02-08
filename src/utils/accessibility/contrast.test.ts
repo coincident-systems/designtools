@@ -11,6 +11,11 @@ import { describe, it, expect } from "vitest";
  * WCAG 2.1 AAA Requirements (aspirational):
  * - Normal text: 7:1 minimum contrast ratio
  * - Large text: 4.5:1 minimum contrast ratio
+ *
+ * MSU Brand Colors:
+ * - MSU Blue: #162960
+ * - MSU Gold: #f4b425
+ * - MSU Gold Light: #fada92
  */
 
 // Convert hex to RGB
@@ -47,49 +52,49 @@ function getContrastRatio(foreground: string, background: string): number {
   return (lighter + 0.05) / (darker + 0.05);
 }
 
-// Theme color definitions
+// Theme color definitions -- MSU Brand
 const lightTheme = {
   background: "#ffffff",
-  foreground: "#343a40",
+  foreground: "#1c1c1e",
   card: "#ffffff",
-  cardForeground: "#343a40",
-  primary: "#28518F",
+  cardForeground: "#1c1c1e",
+  primary: "#162960",
   primaryForeground: "#ffffff",
   secondary: "#007a8c",
   secondaryForeground: "#ffffff",
-  muted: "#f8f9fa",
-  mutedForeground: "#6c757d",
-  accent: "#E6DBA1",
-  accentForeground: "#1a3660",
+  muted: "#f5f5f7",
+  mutedForeground: "#6c6c70",
+  accent: "#f4b425",
+  accentForeground: "#0f1d45",
   destructive: "#dc3545",
-  border: "#dee2e6",
-  sidebarBackground: "#1a3660",
+  border: "#d1d1d6",
+  sidebarBackground: "#162960",
   sidebarForeground: "#ffffff",
-  sidebarPrimary: "#E6DBA1",
+  sidebarPrimary: "#f4b425",
 };
 
 const darkTheme = {
-  background: "#0d1a2d",
-  foreground: "#e8edf3",
-  card: "#132238",
-  cardForeground: "#e8edf3",
-  primary: "#5d8fd4",
-  primaryForeground: "#0d1a2d",
+  background: "#0b1530",
+  foreground: "#e8ecf4",
+  card: "#111e3a",
+  cardForeground: "#e8ecf4",
+  primary: "#4a7fd6",
+  primaryForeground: "#0b1530",
   secondary: "#00c4d9",
-  secondaryForeground: "#0d1a2d",
-  muted: "#1c2f47",
-  mutedForeground: "#a3b3c6",
-  accent: "#E6DBA1",
-  accentForeground: "#0d1a2d",
+  secondaryForeground: "#0b1530",
+  muted: "#172545",
+  mutedForeground: "#9ca3b4",
+  accent: "#f4b425",
+  accentForeground: "#0b1530",
   destructive: "#f87171",
-  border: "#2a4060",
-  sidebarBackground: "#091322",
-  sidebarForeground: "#e8edf3",
-  sidebarPrimary: "#E6DBA1",
+  border: "#243860",
+  sidebarBackground: "#060e1c",
+  sidebarForeground: "#e8ecf4",
+  sidebarPrimary: "#f4b425",
 };
 
 describe("Color Contrast - WCAG 2.1 AA Compliance", () => {
-  describe("Light Theme", () => {
+  describe("Light Theme (MSU Brand)", () => {
     it("foreground on background meets AA for normal text (4.5:1)", () => {
       const ratio = getContrastRatio(lightTheme.foreground, lightTheme.background);
       expect(ratio).toBeGreaterThanOrEqual(4.5);
@@ -100,7 +105,7 @@ describe("Color Contrast - WCAG 2.1 AA Compliance", () => {
       expect(ratio).toBeGreaterThanOrEqual(4.5);
     });
 
-    it("primary on background meets AA for large text (3:1)", () => {
+    it("primary (MSU Blue) on background meets AA for large text (3:1)", () => {
       const ratio = getContrastRatio(lightTheme.primary, lightTheme.background);
       expect(ratio).toBeGreaterThanOrEqual(3);
     });
@@ -115,7 +120,7 @@ describe("Color Contrast - WCAG 2.1 AA Compliance", () => {
       expect(ratio).toBeGreaterThanOrEqual(4.5);
     });
 
-    it("accent-foreground on accent meets AA for normal text (4.5:1)", () => {
+    it("accent-foreground on accent (MSU Gold) meets AA for normal text (4.5:1)", () => {
       const ratio = getContrastRatio(lightTheme.accentForeground, lightTheme.accent);
       expect(ratio).toBeGreaterThanOrEqual(4.5);
     });
@@ -130,13 +135,13 @@ describe("Color Contrast - WCAG 2.1 AA Compliance", () => {
       expect(ratio).toBeGreaterThanOrEqual(4.5);
     });
 
-    it("sidebar-primary on sidebar meets AA for normal text (4.5:1)", () => {
+    it("sidebar-primary (gold) on sidebar (MSU Blue) meets AA for normal text (4.5:1)", () => {
       const ratio = getContrastRatio(lightTheme.sidebarPrimary, lightTheme.sidebarBackground);
       expect(ratio).toBeGreaterThanOrEqual(4.5);
     });
   });
 
-  describe("Dark Theme", () => {
+  describe("Dark Theme (MSU Brand)", () => {
     it("foreground on background meets AA for normal text (4.5:1)", () => {
       const ratio = getContrastRatio(darkTheme.foreground, darkTheme.background);
       expect(ratio).toBeGreaterThanOrEqual(4.5);
@@ -162,7 +167,7 @@ describe("Color Contrast - WCAG 2.1 AA Compliance", () => {
       expect(ratio).toBeGreaterThanOrEqual(4.5);
     });
 
-    it("accent on background meets AA for normal text (4.5:1)", () => {
+    it("accent (MSU Gold) on background meets AA for normal text (4.5:1)", () => {
       const ratio = getContrastRatio(darkTheme.accent, darkTheme.background);
       expect(ratio).toBeGreaterThanOrEqual(4.5);
     });
@@ -187,7 +192,7 @@ describe("Color Contrast - WCAG 2.1 AA Compliance", () => {
       expect(ratio).toBeGreaterThanOrEqual(4.5);
     });
 
-    it("sidebar-primary on sidebar meets AAA for large text (4.5:1)", () => {
+    it("sidebar-primary (gold) on sidebar meets AAA for large text (4.5:1)", () => {
       const ratio = getContrastRatio(darkTheme.sidebarPrimary, darkTheme.sidebarBackground);
       expect(ratio).toBeGreaterThanOrEqual(4.5);
     });
@@ -223,13 +228,17 @@ describe("Color Contrast - Reported Ratios", () => {
           lightTheme.mutedForeground,
           lightTheme.background
         ).toFixed(1),
-        "primary/background": getContrastRatio(
+        "primary(MSU Blue)/background": getContrastRatio(
           lightTheme.primary,
           lightTheme.background
         ).toFixed(1),
         "destructive/background": getContrastRatio(
           lightTheme.destructive,
           lightTheme.background
+        ).toFixed(1),
+        "sidebarPrimary(gold)/sidebar(blue)": getContrastRatio(
+          lightTheme.sidebarPrimary,
+          lightTheme.sidebarBackground
         ).toFixed(1),
       },
       dark: {
@@ -249,7 +258,7 @@ describe("Color Contrast - Reported Ratios", () => {
           darkTheme.destructive,
           darkTheme.background
         ).toFixed(1),
-        "accent/background": getContrastRatio(
+        "accent(gold)/background": getContrastRatio(
           darkTheme.accent,
           darkTheme.background
         ).toFixed(1),

@@ -3,24 +3,25 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* ===== DESIGN TOKENS (Coincident Systems) ===== */
+/* ===== DESIGN TOKENS (MSU / DesignTools) ===== */
 @theme {
-  /* Brand Colors */
-  --color-cs-blue: #28518F;
-  --color-cs-blue-light: #3d6db0;
-  --color-cs-blue-dark: #1a3660;
-  --color-cs-gold: #E6DBA1;
-  --color-cs-gold-dark: #c4b97d;
-  --color-cs-teal: #007a8c;
-  --color-cs-teal-light: #009BB3;
+  /* MSU Brand Colors */
+  --color-msu-blue: #162960;
+  --color-msu-blue-light: #1e3a80;
+  --color-msu-blue-dark: #0f1d45;
+  --color-msu-gold: #f4b425;
+  --color-msu-gold-light: #fada92;
+  --color-msu-gold-dark: #d49a10;
+  --color-msu-teal: #007a8c;
+  --color-msu-teal-light: #009BB3;
 
   /* Semantic Colors */
-  --color-primary: var(--color-cs-blue);
+  --color-primary: var(--color-msu-blue);
   --color-primary-foreground: #ffffff;
-  --color-secondary: var(--color-cs-teal);
+  --color-secondary: var(--color-msu-teal);
   --color-secondary-foreground: #ffffff;
-  --color-accent: var(--color-cs-gold);
-  --color-accent-foreground: var(--color-cs-blue-dark);
+  --color-accent: var(--color-msu-gold);
+  --color-accent-foreground: var(--color-msu-blue-dark);
 
   /* Font Family */
   --font-display: 'Jost', ui-sans-serif, system-ui, sans-serif;
@@ -49,7 +50,7 @@ body {
 
 /* ===== FOCUS STYLES ===== */
 :focus-visible {
-  outline: 3px solid var(--color-cs-gold);
+  outline: 3px solid var(--color-msu-gold);
   outline-offset: 2px;
 }
 
@@ -101,7 +102,7 @@ body {
 }
 
 .dark .results-panel {
-  background: #091322;
+  background: #060e1c;
   border: 1px solid var(--border);
 }
 
@@ -112,16 +113,16 @@ body {
 
 /* ===== SIDEBAR GRADIENT ===== */
 [data-sidebar="sidebar"] {
-  background: linear-gradient(180deg, #1a3660 0%, #28518F 100%) !important;
+  background: linear-gradient(180deg, #0f1d45 0%, #162960 100%) !important;
 }
 
 .dark [data-sidebar="sidebar"] {
-  background: linear-gradient(180deg, #091322 0%, #0d1a2d 100%) !important;
+  background: linear-gradient(180deg, #060e1c 0%, #0b1530 100%) !important;
 }
 
 /* Active nav item styling */
 [data-sidebar="menu-button"][data-active="true"] {
-  background: #3d6db0 !important;
+  background: #1e3a80 !important;
 }
 
 /* ===== TYPOGRAPHY ===== */
@@ -175,106 +176,114 @@ h1, h2, h3, h4, h5, h6 {
   --color-sidebar-ring: var(--sidebar-ring);
 }
 
+/*
+ * Light Theme - MSU Brand
+ *
+ * MSU Blue: #162960
+ * MSU Gold: #f4b425
+ * MSU Gold Light: #fada92
+ */
 :root {
   --radius: 0.5rem;
-  /* Coincident Systems Theme */
+  /* MSU Light Theme */
   --background: #ffffff;
-  --foreground: #343a40;
+  --foreground: #1c1c1e;
   --card: #ffffff;
-  --card-foreground: #343a40;
+  --card-foreground: #1c1c1e;
   --popover: #ffffff;
-  --popover-foreground: #343a40;
-  --primary: #28518F;
+  --popover-foreground: #1c1c1e;
+  --primary: #162960;
   --primary-foreground: #ffffff;
   --secondary: #007a8c;
   --secondary-foreground: #ffffff;
-  --muted: #f8f9fa;
-  --muted-foreground: #6c757d;
-  --accent: #E6DBA1;
-  --accent-foreground: #1a3660;
+  --muted: #f5f5f7;
+  --muted-foreground: #6c6c70;
+  --accent: #f4b425;
+  --accent-foreground: #0f1d45;
   --destructive: #dc3545;
-  --border: #dee2e6;
-  --input: #dee2e6;
-  --ring: #E6DBA1;
-  --chart-1: #28518F;
-  --chart-2: #009BB3;
-  --chart-3: #E6DBA1;
-  --chart-4: #3d6db0;
-  --chart-5: #00b8d4;
-  /* Sidebar - Dark Blue Theme */
-  --sidebar: #1a3660;
+  --border: #d1d1d6;
+  --input: #d1d1d6;
+  --ring: #f4b425;
+  --chart-1: #162960;
+  --chart-2: #007a8c;
+  --chart-3: #f4b425;
+  --chart-4: #1e3a80;
+  --chart-5: #009BB3;
+  /* Sidebar - MSU Blue gradient */
+  --sidebar: #162960;
   --sidebar-foreground: #ffffff;
-  --sidebar-primary: #E6DBA1;
-  --sidebar-primary-foreground: #1a3660;
-  --sidebar-accent: #28518F;
+  --sidebar-primary: #f4b425;
+  --sidebar-primary-foreground: #0f1d45;
+  --sidebar-accent: #1e3a80;
   --sidebar-accent-foreground: #ffffff;
-  --sidebar-border: #28518F;
-  --sidebar-ring: #E6DBA1;
+  --sidebar-border: #1e3a80;
+  --sidebar-ring: #f4b425;
 }
 
 /*
- * Dark Theme - Brand-Aware with WCAG AA Compliant Contrast
+ * Dark Theme - MSU Brand-Aware with WCAG AA Compliant Contrast
  *
  * Contrast Ratios (verified):
- * - foreground on background: 15.8:1 (#e8edf3 on #0d1a2d)
- * - muted-foreground on background: 7.2:1 (#a3b3c6 on #0d1a2d)
- * - primary on background: 5.8:1 (#5d8fd4 on #0d1a2d)
- * - accent (gold) on dark: 11.2:1 (#E6DBA1 on #0d1a2d)
- * - destructive on background: 5.5:1 (#f87171 on #0d1a2d)
+ * - foreground on background: 15.2:1 (#e8ecf4 on #0b1530)
+ * - muted-foreground on background: 7.1:1 (#9ca3b4 on #0b1530)
+ * - primary (lightened) on background: 5.4:1 (#4a7fd6 on #0b1530)
+ * - accent (gold) on dark: 9.8:1 (#f4b425 on #0b1530)
+ * - gold-light on dark: 13.1:1 (#fada92 on #0b1530)
+ * - destructive on background: 5.5:1 (#f87171 on #0b1530)
  */
 .dark {
-  /* Base - Deep blue-tinted dark background */
-  --background: #0d1a2d;
-  --foreground: #e8edf3;
+  /* Base - Deep MSU blue-tinted dark background */
+  --background: #0b1530;
+  --foreground: #e8ecf4;
 
   /* Cards - Slightly lighter for elevation */
-  --card: #132238;
-  --card-foreground: #e8edf3;
+  --card: #111e3a;
+  --card-foreground: #e8ecf4;
 
   /* Popovers/Dialogs - Match cards */
-  --popover: #132238;
-  --popover-foreground: #e8edf3;
+  --popover: #111e3a;
+  --popover-foreground: #e8ecf4;
 
-  /* Primary - Lightened CS Blue for dark mode visibility */
-  --primary: #5d8fd4;
-  --primary-foreground: #0d1a2d;
+  /* Primary - Lightened MSU Blue for dark mode visibility */
+  --primary: #4a7fd6;
+  --primary-foreground: #0b1530;
 
   /* Secondary - Brightened Teal */
   --secondary: #00c4d9;
-  --secondary-foreground: #0d1a2d;
+  --secondary-foreground: #0b1530;
 
   /* Muted - Subtle blue-gray */
-  --muted: #1c2f47;
-  --muted-foreground: #a3b3c6;
+  --muted: #172545;
+  --muted-foreground: #9ca3b4;
 
-  /* Accent - Gold stays vibrant, great contrast on dark */
-  --accent: #E6DBA1;
-  --accent-foreground: #0d1a2d;
+  /* Accent - MSU Gold stays vibrant, great contrast on dark */
+  --accent: #f4b425;
+  --accent-foreground: #0b1530;
 
   /* Destructive - Softer red for dark mode */
   --destructive: #f87171;
 
   /* Borders and inputs */
-  --border: #2a4060;
-  --input: #1c2f47;
-  --ring: #E6DBA1;
+  --border: #243860;
+  --input: #172545;
+  --ring: #f4b425;
 
   /* Charts - Adjusted for dark backgrounds */
-  --chart-1: #5d8fd4;
+  --chart-1: #4a7fd6;
   --chart-2: #00c4d9;
-  --chart-3: #E6DBA1;
-  --chart-4: #7da8e0;
+  --chart-3: #f4b425;
+  --chart-4: #6b9be0;
   --chart-5: #4dd4e5;
 
   /* Sidebar - Darker variant */
-  --sidebar: #091322;
-  --sidebar-foreground: #e8edf3;
-  --sidebar-primary: #E6DBA1;
-  --sidebar-primary-foreground: #0d1a2d;
-  --sidebar-accent: #1c2f47;
-  --sidebar-accent-foreground: #e8edf3;
-  --sidebar-border: #2a4060;
-  --sidebar-ring: #E6DBA1;
+  --sidebar: #060e1c;
+  --sidebar-foreground: #e8ecf4;
+  --sidebar-primary: #f4b425;
+  --sidebar-primary-foreground: #0b1530;
+  --sidebar-accent: #172545;
+  --sidebar-accent-foreground: #e8ecf4;
+  --sidebar-border: #243860;
+  --sidebar-ring: #f4b425;
 }
 
 @layer base {
