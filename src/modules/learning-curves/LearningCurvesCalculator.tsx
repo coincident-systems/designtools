@@ -289,6 +289,7 @@ export function LearningCurvesCalculator() {
                       <span className="text-sm text-muted-foreground w-8">{index + 1}.</span>
                       <div className="flex-1 grid grid-cols-2 gap-2">
                         <FormInput
+                          label=""
                           type="number"
                           placeholder="Cycle"
                           error={
@@ -300,6 +301,7 @@ export function LearningCurvesCalculator() {
                           aria-label={`Cycle number for point ${index + 1}`}
                         />
                         <FormInput
+                          label=""
                           type="number"
                           placeholder="Time"
                           step="0.01"

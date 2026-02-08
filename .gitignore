@@ -31,3 +31,4 @@ storybook-static
 
 # Tauri
 src-tauri/target/
+.vercel

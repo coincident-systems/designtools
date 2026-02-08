@@ -35,6 +35,10 @@ export interface ResultItem {
   status?: "default" | "success" | "warning" | "danger" | "info";
   /** Optional unit suffix */
   unit?: string;
+  /** Optional description/subtitle text */
+  description?: string;
+  /** Use monospace font for value */
+  monospace?: boolean;
 }
 
 export interface ResultsDisplayProps {
@@ -50,6 +54,8 @@ export interface ResultsDisplayProps {
   className?: string;
   /** Compact mode */
   compact?: boolean;
+  /** Overall status coloring for the card */
+  status?: "default" | "success" | "warning" | "danger" | "info";
 }
 
 const statusColors: Record<NonNullable<ResultItem["status"]>, string> = {
@@ -94,24 +100,28 @@ export function ResultsDisplay({
             {items.map((item, i) => (
               <div
                 key={`${item.label}-${i}`}
-                className="flex items-baseline justify-between py-1.5 border-b border-border/40 last:border-0"
+                className="flex flex-col py-1.5 border-b border-border/40 last:border-0"
               >
-                <span className="text-sm text-muted-foreground">
-                  {item.label}
-                </span>
-                <span
-                  className={cn(
-                    "font-mono text-sm font-medium tabular-nums",
-                    statusColors[item.status || "default"]
-                  )}
-                >
-                  {item.value}
-                  {item.unit && (
-                    <span className="ml-1 text-xs text-muted-foreground font-normal">
-                      {item.unit}
-                    </span>
-                  )}
-                </span>
+                <div className="flex items-baseline justify-between">
+                  <span className="text-sm text-muted-foreground">{item.label}</span>
+                  <span
+                    className={cn(
+                      "text-sm font-medium tabular-nums",
+                      item.monospace && "font-mono",
+                      statusColors[item.status || "default"]
+                    )}
+                  >
+                    {item.value}
+                    {item.unit && (
+                      <span className="ml-1 text-xs text-muted-foreground font-normal">
+                        {item.unit}
+                      </span>
+                    )}
+                  </span>
+                </div>
+                {item.description && (
+                  <span className="text-xs text-muted-foreground mt-0.5">{item.description}</span>
+                )}
               </div>
             ))}
           </div>
