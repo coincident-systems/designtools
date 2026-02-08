@@ -1,81 +1,52 @@
 import { useState } from "react";
+import { useForm, useFieldArray } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Calculator, Plus, Trash2, Volume2, AlertTriangle, CheckCircle } from "lucide-react";
+import { Plus, Trash2, Volume2, AlertTriangle, CheckCircle } from "lucide-react";
+import {
+  FormInput,
+  CalculateButton,
+  HelpPanel,
+} from "@/components/forms";
+import { noiseDoseSchema, type NoiseDoseInput } from "@/schemas";
 import {
   calculateNoiseDose,
   formatDose,
   formatDuration,
   getRiskLevel,
   OSHA_PERMISSIBLE_EXPOSURES,
-  type NoiseExposure,
   type NoiseDoseResult,
 } from "@/utils/calculations/noise-dose";
 
-interface ExposureInput {
-  level: string;
-  duration: string;
-}
-
-const MAX_EXPOSURES = 8;
-
 export function NoiseDoseCalculator() {
-  const [exposures, setExposures] = useState<ExposureInput[]>([
-    { level: "90", duration: "4" },
-    { level: "95", duration: "2" },
-  ]);
   const [result, setResult] = useState<NoiseDoseResult | null>(null);
-  const [error, setError] = useState<string | null>(null);
 
-  const handleCalculate = () => {
-    setError(null);
-    try {
-      // Parse and validate inputs
-      const validExposures: NoiseExposure[] = exposures
-        .map((exp) => ({
-          level: parseFloat(exp.level),
-          duration: parseFloat(exp.duration),
-        }))
-        .filter((exp) => !isNaN(exp.level) && !isNaN(exp.duration) && exp.duration > 0);
+  const form = useForm<NoiseDoseInput>({
+    resolver: zodResolver(noiseDoseSchema) as any,
+    defaultValues: {
+      exposures: [
+        { level: 90, duration: 4 },
+        { level: 95, duration: 2 },
+      ],
+    },
+  });
 
-      if (validExposures.length === 0) {
-        setError("Please enter at least one valid exposure (noise level and duration > 0)");
-        setResult(null);
-        return;
-      }
+  const { fields, append, remove } = useFieldArray({
+    control: form.control,
+    name: "exposures",
+  });
 
-      const calculationResult = calculateNoiseDose(validExposures);
-      setResult(calculationResult);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Calculation error");
-      setResult(null);
-    }
-  };
-
-  const addExposure = () => {
-    if (exposures.length < MAX_EXPOSURES) {
-      setExposures([...exposures, { level: "", duration: "" }]);
-    }
-  };
-
-  const removeExposure = (index: number) => {
-    if (exposures.length > 1) {
-      setExposures(exposures.filter((_, i) => i !== index));
-    }
-  };
-
-  const updateExposure = (index: number, field: keyof ExposureInput, value: string) => {
-    const updated = [...exposures];
-    updated[index] = { ...updated[index], [field]: value };
-    setExposures(updated);
-  };
+  const handleSubmit = form.handleSubmit((data) => {
+    const calcResult = calculateNoiseDose(data.exposures);
+    setResult(calcResult);
+  });
 
   const riskInfo = result ? getRiskLevel(result.dose) : null;
 
   return (
-    <div className="space-y-6">
+    <form onSubmit={handleSubmit} className="space-y-6">
       {/* Introduction Card */}
       <Card>
         <CardHeader className="pb-3">
@@ -99,10 +70,11 @@ export function NoiseDoseCalculator() {
           <div className="flex items-center justify-between">
             <CardTitle className="text-lg text-primary">Noise Exposure Data</CardTitle>
             <Button
+              type="button"
               variant="outline"
               size="sm"
-              onClick={addExposure}
-              disabled={exposures.length >= MAX_EXPOSURES}
+              onClick={() => append({ level: 90, duration: 4 })}
+              disabled={fields.length >= 8}
               data-testid="add-exposure"
             >
               <Plus className="h-4 w-4 mr-1" aria-hidden="true" />
@@ -110,7 +82,7 @@ export function NoiseDoseCalculator() {
             </Button>
           </div>
           <p className="text-sm text-muted-foreground">
-            Enter up to {MAX_EXPOSURES} different noise exposures throughout the workday.
+            Enter up to 8 different noise exposures throughout the workday.
           </p>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -123,14 +95,10 @@ export function NoiseDoseCalculator() {
           </div>
 
           {/* Exposure Rows */}
-          <div
-            className="space-y-2"
-            role="list"
-            aria-label="Noise exposure entries"
-          >
-            {exposures.map((exposure, index) => (
+          <div className="space-y-2" role="list" aria-label="Noise exposure entries">
+            {fields.map((field, index) => (
               <div
-                key={index}
+                key={field.id}
                 className="grid grid-cols-12 gap-2 items-center"
                 role="listitem"
                 aria-label={`Exposure ${index + 1}`}
@@ -139,35 +107,33 @@ export function NoiseDoseCalculator() {
                   {index + 1}.
                 </div>
                 <div className="col-span-5">
-                  <Input
+                  <FormInput
+                    label=""
                     type="number"
-                    min="80"
-                    max="130"
-                    step="1"
                     placeholder="90"
-                    value={exposure.level}
-                    onChange={(e) => updateExposure(index, "level", e.target.value)}
+                    error={form.formState.errors.exposures?.[index]?.level?.message}
+                    {...form.register(`exposures.${index}.level`, { valueAsNumber: true })}
                     aria-label={`Noise level for exposure ${index + 1}`}
                   />
                 </div>
                 <div className="col-span-5">
-                  <Input
+                  <FormInput
+                    label=""
                     type="number"
-                    min="0"
-                    max="24"
                     step="0.25"
                     placeholder="4"
-                    value={exposure.duration}
-                    onChange={(e) => updateExposure(index, "duration", e.target.value)}
+                    error={form.formState.errors.exposures?.[index]?.duration?.message}
+                    {...form.register(`exposures.${index}.duration`, { valueAsNumber: true })}
                     aria-label={`Duration for exposure ${index + 1}`}
                   />
                 </div>
                 <div className="col-span-1">
                   <Button
+                    type="button"
                     variant="ghost"
                     size="icon"
-                    onClick={() => removeExposure(index)}
-                    disabled={exposures.length <= 1}
+                    onClick={() => remove(index)}
+                    disabled={fields.length <= 1}
                     aria-label={`Remove exposure ${index + 1}`}
                   >
                     <Trash2 className="h-4 w-4" aria-hidden="true" />
@@ -179,25 +145,11 @@ export function NoiseDoseCalculator() {
 
           <Separator />
 
-          <Button
-            onClick={handleCalculate}
-            className="w-full"
-            data-testid="calculate-noise-dose"
-          >
-            <Calculator className="mr-2 h-4 w-4" aria-hidden="true" />
+          <CalculateButton type="submit" data-testid="calculate-noise-dose">
             Calculate OSHA Noise Dose
-          </Button>
+          </CalculateButton>
 
-          {error && (
-            <div
-              className="p-4 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-sm"
-              role="alert"
-            >
-              {error}
-            </div>
-          )}
-
-          {result && !error && (
+          {result && (
             <div
               className="space-y-4"
               role="status"
@@ -325,6 +277,31 @@ export function NoiseDoseCalculator() {
           </p>
         </CardContent>
       </Card>
-    </div>
+
+      {/* Help Panel */}
+      <HelpPanel title="OSHA Noise Dose">
+        <HelpPanel.Formula>
+          <p className="mb-2">
+            <strong>Noise Dose</strong> = Σ(C_i / T_i) × 100
+          </p>
+          <ul className="list-disc pl-6 space-y-1 text-sm">
+            <li>C_i = Actual exposure time at noise level i (hours)</li>
+            <li>T_i = Allowable exposure time at noise level i (hours)</li>
+          </ul>
+          <p className="mt-3">
+            <strong>Time-Weighted Average (TWA)</strong> = 16.61 × log₁₀(Dose/100) + 90 dB(A)
+          </p>
+          <p className="mt-2 text-sm">
+            OSHA uses a 5 dB exchange rate, meaning the allowed exposure time is halved for every 5
+            dB increase in noise level.
+          </p>
+        </HelpPanel.Formula>
+
+        <HelpPanel.Reference>
+          OSHA. (1983). Occupational Noise Exposure; Hearing Conservation Amendment; Final Rule. 29
+          CFR 1910.95. <em>Federal Register</em>, 48(46), 9738-9785.
+        </HelpPanel.Reference>
+      </HelpPanel>
+    </form>
   );
 }
