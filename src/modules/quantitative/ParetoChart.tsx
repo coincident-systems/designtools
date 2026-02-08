@@ -1,81 +1,74 @@
 import { useState } from "react";
+import { useForm, useFieldArray } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { BarChart3, Plus, Trash2, Info, Sparkles, RotateCcw } from "lucide-react";
+import { CalculateButton, HelpPanel } from "@/components/forms";
+import { paretoAnalysisSchema, type ParetoAnalysisInput } from "@/schemas";
 import {
   analyzePareto,
   formatParetoValue,
   generateSampleData,
-  type ParetoItem,
   type ParetoResult,
 } from "@/utils/calculations/pareto";
 
-interface DataEntry {
-  category: string;
-  value: string;
-}
-
 export function ParetoChart() {
-  const [entries, setEntries] = useState<DataEntry[]>([
-    { category: "", value: "" },
-    { category: "", value: "" },
-    { category: "", value: "" },
-  ]);
   const [valueLabel, setValueLabel] = useState("Count");
   const [result, setResult] = useState<ParetoResult | null>(null);
 
-  const handleAnalyze = () => {
-    const items: ParetoItem[] = entries
-      .filter((e) => e.category.trim() && parseFloat(e.value) > 0)
-      .map((e, i) => ({
-        id: `item-${i}`,
-        category: e.category.trim(),
-        value: parseFloat(e.value),
-      }));
+  const form = useForm<ParetoAnalysisInput>({
+    resolver: zodResolver(paretoAnalysisSchema) as any,
+    defaultValues: {
+      items: [
+        { id: crypto.randomUUID(), category: "", value: 0 },
+        { id: crypto.randomUUID(), category: "", value: 0 },
+        { id: crypto.randomUUID(), category: "", value: 0 },
+      ],
+      vitalFewThreshold: 80,
+    },
+  });
 
-    if (items.length < 2) {
-      return;
-    }
+  const { fields, append, remove } = useFieldArray({
+    control: form.control,
+    name: "items",
+  });
 
-    const analysis = analyzePareto(items, 80);
+  const handleSubmit = form.handleSubmit((data) => {
+    const validItems = data.items.filter((item) => item.category.trim() && item.value > 0);
+    if (validItems.length < 2) return;
+
+    const analysis = analyzePareto(validItems, data.vitalFewThreshold);
     setResult(analysis);
-  };
-
-  const addEntry = () => {
-    if (entries.length < 20) {
-      setEntries([...entries, { category: "", value: "" }]);
-    }
-  };
-
-  const removeEntry = (index: number) => {
-    if (entries.length > 2) {
-      setEntries(entries.filter((_, i) => i !== index));
-    }
-  };
-
-  const updateEntry = (index: number, field: keyof DataEntry, value: string) => {
-    const updated = [...entries];
-    updated[index] = { ...updated[index], [field]: value };
-    setEntries(updated);
-  };
+  });
 
   const loadSampleData = () => {
     const sample = generateSampleData();
-    setEntries(sample.map((s) => ({ category: s.category, value: s.value.toString() })));
+    form.setValue(
+      "items",
+      sample.map((s) => ({ id: s.id, category: s.category, value: s.value }))
+    );
     setValueLabel("Defects");
   };
 
   const resetData = () => {
-    setEntries([
-      { category: "", value: "" },
-      { category: "", value: "" },
-      { category: "", value: "" },
-    ]);
+    form.reset({
+      items: [
+        { id: crypto.randomUUID(), category: "", value: 0 },
+        { id: crypto.randomUUID(), category: "", value: 0 },
+        { id: crypto.randomUUID(), category: "", value: 0 },
+      ],
+      vitalFewThreshold: 80,
+    });
     setResult(null);
     setValueLabel("Count");
+  };
+
+  const addEntry = () => {
+    append({ id: crypto.randomUUID(), category: "", value: 0 });
   };
 
   const maxValue = result ? Math.max(...result.items.map((i) => i.value)) : 0;
@@ -100,96 +93,97 @@ export function ParetoChart() {
       </Card>
 
       {/* Data Input */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-lg text-primary flex items-center gap-2">
-              <BarChart3 className="h-5 w-5" />
-              Data Entry
-            </CardTitle>
+      <form onSubmit={handleSubmit}>
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-lg text-primary flex items-center gap-2">
+                <BarChart3 className="h-5 w-5" />
+                Data Entry
+              </CardTitle>
+              <div className="flex gap-2">
+                <Button type="button" variant="outline" size="sm" onClick={loadSampleData}>
+                  <Sparkles className="h-4 w-4 mr-1" />
+                  Sample Data
+                </Button>
+                <Button type="button" variant="outline" size="sm" onClick={addEntry} disabled={fields.length >= 20}>
+                  <Plus className="h-4 w-4 mr-1" />
+                  Add Row
+                </Button>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="valueLabel">Value Label</Label>
+              <Input
+                id="valueLabel"
+                value={valueLabel}
+                onChange={(e) => setValueLabel(e.target.value)}
+                placeholder="e.g., Count, Cost, Time"
+                className="max-w-xs"
+              />
+            </div>
+
+            <Separator />
+
+            {/* Header */}
+            <div className="grid grid-cols-12 gap-2 text-sm font-medium text-muted-foreground">
+              <div className="col-span-1">#</div>
+              <div className="col-span-6">Category</div>
+              <div className="col-span-4">{valueLabel}</div>
+              <div className="col-span-1"></div>
+            </div>
+
+            {/* Data Rows */}
+            <div className="space-y-2">
+              {fields.map((field, index) => (
+                <div key={field.id} className="grid grid-cols-12 gap-2 items-center">
+                  <div className="col-span-1 text-sm text-muted-foreground">
+                    {index + 1}.
+                  </div>
+                  <div className="col-span-6">
+                    <Input
+                      placeholder="Category name"
+                      {...form.register(`items.${index}.category`)}
+                    />
+                  </div>
+                  <div className="col-span-4">
+                    <Input
+                      type="number"
+                      min="0"
+                      placeholder="0"
+                      {...form.register(`items.${index}.value`, { valueAsNumber: true })}
+                    />
+                  </div>
+                  <div className="col-span-1">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => remove(index)}
+                      disabled={fields.length <= 2}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
             <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={loadSampleData}>
-                <Sparkles className="h-4 w-4 mr-1" />
-                Sample Data
-              </Button>
-              <Button variant="outline" size="sm" onClick={addEntry} disabled={entries.length >= 20}>
-                <Plus className="h-4 w-4 mr-1" />
-                Add Row
+              <CalculateButton type="submit" className="flex-1 md:flex-none">
+                <BarChart3 className="mr-2 h-4 w-4" />
+                Generate Pareto Chart
+              </CalculateButton>
+              <Button type="button" variant="outline" onClick={resetData}>
+                <RotateCcw className="mr-2 h-4 w-4" />
+                Reset
               </Button>
             </div>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="valueLabel">Value Label</Label>
-            <Input
-              id="valueLabel"
-              value={valueLabel}
-              onChange={(e) => setValueLabel(e.target.value)}
-              placeholder="e.g., Count, Cost, Time"
-              className="max-w-xs"
-            />
-          </div>
-
-          <Separator />
-
-          {/* Header */}
-          <div className="grid grid-cols-12 gap-2 text-sm font-medium text-muted-foreground">
-            <div className="col-span-1">#</div>
-            <div className="col-span-6">Category</div>
-            <div className="col-span-4">{valueLabel}</div>
-            <div className="col-span-1"></div>
-          </div>
-
-          {/* Data Rows */}
-          <div className="space-y-2">
-            {entries.map((entry, index) => (
-              <div key={index} className="grid grid-cols-12 gap-2 items-center">
-                <div className="col-span-1 text-sm text-muted-foreground">
-                  {index + 1}.
-                </div>
-                <div className="col-span-6">
-                  <Input
-                    placeholder="Category name"
-                    value={entry.category}
-                    onChange={(e) => updateEntry(index, "category", e.target.value)}
-                  />
-                </div>
-                <div className="col-span-4">
-                  <Input
-                    type="number"
-                    min="0"
-                    placeholder="0"
-                    value={entry.value}
-                    onChange={(e) => updateEntry(index, "value", e.target.value)}
-                  />
-                </div>
-                <div className="col-span-1">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => removeEntry(index)}
-                    disabled={entries.length <= 2}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div className="flex gap-2">
-            <Button onClick={handleAnalyze} className="flex-1 md:flex-none">
-              <BarChart3 className="mr-2 h-4 w-4" />
-              Generate Pareto Chart
-            </Button>
-            <Button variant="outline" onClick={resetData}>
-              <RotateCcw className="mr-2 h-4 w-4" />
-              Reset
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      </form>
 
       {/* Results */}
       {result && result.items.length > 0 && (
@@ -365,13 +359,10 @@ export function ParetoChart() {
         </Card>
       )}
 
-      {/* Reference */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-lg">Pareto Principle Reference</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3 text-sm">
+      {/* Help Panel */}
+      <HelpPanel title="Pareto Principle">
+        <HelpPanel.Formula>
+          <div className="space-y-3">
             <div>
               <strong>80/20 Rule:</strong> Approximately 80% of effects come from 20% of causes.
               Also known as the "law of the vital few."
@@ -384,14 +375,13 @@ export function ParetoChart() {
               <strong>Trivial Many:</strong> The larger number of categories that contribute
               less. Address after vital few are resolved.
             </div>
-            <Separator />
-            <p className="text-muted-foreground">
-              Applications: Quality defects, customer complaints, inventory costs, project delays,
-              safety incidents, machine downtime.
-            </p>
           </div>
-        </CardContent>
-      </Card>
+        </HelpPanel.Formula>
+        <HelpPanel.Reference>
+          <strong>Applications:</strong> Quality defects, customer complaints, inventory costs, 
+          project delays, safety incidents, machine downtime, ABC inventory analysis.
+        </HelpPanel.Reference>
+      </HelpPanel>
     </div>
   );
 }
