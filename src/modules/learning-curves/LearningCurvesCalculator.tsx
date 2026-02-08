@@ -1,10 +1,22 @@
 import { useState, useMemo } from "react";
+import { useForm, useFieldArray } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
-import { Calculator, Plus, Trash2, TrendingDown } from "lucide-react";
+import { Plus, Trash2, TrendingDown } from "lucide-react";
+import {
+  FormInput,
+  FormFrame,
+  ResultsDisplay,
+  CalculateButton,
+  HelpPanel,
+} from "@/components/forms";
+import {
+  learningCurveTwoPointSchema,
+  learningCurveRegressionSchema,
+  type LearningCurveTwoPointInput,
+  type LearningCurveRegressionInput,
+} from "@/schemas";
 import {
   calculateTwoPointMethod,
   calculateRegressionMethod,
@@ -17,111 +29,53 @@ import {
 
 type CalculationMode = "two-point" | "regression";
 
-interface DataPoint {
-  cycle: string;
-  time: string;
-}
-
 export function LearningCurvesCalculator() {
   const [mode, setMode] = useState<CalculationMode>("two-point");
-
-  // Two-Point Method state
-  const [twoPointInputs, setTwoPointInputs] = useState({
-    x1: "50",
-    y1: "20",
-    x2: "100",
-    y2: "15",
-    predictCycle: "200",
-  });
   const [twoPointResult, setTwoPointResult] = useState<LearningCurveResult | null>(null);
-  const [twoPointError, setTwoPointError] = useState<string | null>(null);
-  const [twoPointPrediction, setTwoPointPrediction] = useState<number | null>(null);
-
-  // Regression Method state
-  const [dataPoints, setDataPoints] = useState<DataPoint[]>([
-    { cycle: "1", time: "100" },
-    { cycle: "2", time: "80" },
-    { cycle: "4", time: "64" },
-    { cycle: "8", time: "51" },
-  ]);
-  const [regressionPredictCycle, setRegressionPredictCycle] = useState("16");
   const [regressionResult, setRegressionResult] = useState<RegressionResult | null>(null);
-  const [regressionError, setRegressionError] = useState<string | null>(null);
-  const [regressionPrediction, setRegressionPrediction] = useState<number | null>(null);
 
-  const handleCalculateTwoPoint = () => {
-    setTwoPointError(null);
-    setTwoPointPrediction(null);
-    try {
-      const x1 = parseFloat(twoPointInputs.x1);
-      const y1 = parseFloat(twoPointInputs.y1);
-      const x2 = parseFloat(twoPointInputs.x2);
-      const y2 = parseFloat(twoPointInputs.y2);
-      const predictCycle = parseFloat(twoPointInputs.predictCycle);
+  // Two-Point Method form
+  const twoPointForm = useForm<LearningCurveTwoPointInput>({
+    resolver: zodResolver(learningCurveTwoPointSchema),
+    defaultValues: {
+      x1: 50,
+      y1: 20,
+      x2: 100,
+      y2: 15,
+      predictionCycle: 200,
+    },
+  });
 
-      if ([x1, y1, x2, y2].some(isNaN)) {
-        setTwoPointError("Please enter valid numbers for all data points");
-        setTwoPointResult(null);
-        return;
-      }
+  // Regression Method form
+  const regressionForm = useForm<LearningCurveRegressionInput>({
+    resolver: zodResolver(learningCurveRegressionSchema),
+    defaultValues: {
+      dataPoints: [
+        { cycle: 1, time: 100 },
+        { cycle: 2, time: 80 },
+        { cycle: 4, time: 64 },
+        { cycle: 8, time: 51 },
+      ],
+      predictionCycle: 16,
+    },
+  });
 
-      const result = calculateTwoPointMethod({ x1, y1, x2, y2 });
-      setTwoPointResult(result);
+  const { fields, append, remove } = useFieldArray({
+    control: regressionForm.control,
+    name: "dataPoints",
+  });
 
-      // Calculate prediction if valid
-      if (!isNaN(predictCycle) && predictCycle > 0) {
-        const predicted = predictTimeAtCycle(predictCycle, result.firstUnitValue, result.exponent);
-        setTwoPointPrediction(predicted);
-      }
-    } catch (err) {
-      setTwoPointError(err instanceof Error ? err.message : "Calculation error");
-      setTwoPointResult(null);
-    }
-  };
+  const handleTwoPointSubmit = twoPointForm.handleSubmit((data) => {
+    const result = calculateTwoPointMethod(data);
+    setTwoPointResult(result);
+  });
 
-  const handleCalculateRegression = () => {
-    setRegressionError(null);
-    setRegressionPrediction(null);
-    try {
-      const cycles = dataPoints.map((p) => parseFloat(p.cycle));
-      const times = dataPoints.map((p) => parseFloat(p.time));
-      const predictCycle = parseFloat(regressionPredictCycle);
-
-      if (cycles.some(isNaN) || times.some(isNaN)) {
-        setRegressionError("Please enter valid numbers for all data points");
-        setRegressionResult(null);
-        return;
-      }
-
-      const result = calculateRegressionMethod({ cycles, times });
-      setRegressionResult(result);
-
-      // Calculate prediction if valid
-      if (!isNaN(predictCycle) && predictCycle > 0) {
-        const predicted = predictTimeAtCycle(predictCycle, result.firstUnitValue, result.exponent);
-        setRegressionPrediction(predicted);
-      }
-    } catch (err) {
-      setRegressionError(err instanceof Error ? err.message : "Calculation error");
-      setRegressionResult(null);
-    }
-  };
-
-  const addDataPoint = () => {
-    setDataPoints([...dataPoints, { cycle: "", time: "" }]);
-  };
-
-  const removeDataPoint = (index: number) => {
-    if (dataPoints.length > 2) {
-      setDataPoints(dataPoints.filter((_, i) => i !== index));
-    }
-  };
-
-  const updateDataPoint = (index: number, field: keyof DataPoint, value: string) => {
-    const updated = [...dataPoints];
-    updated[index] = { ...updated[index], [field]: value };
-    setDataPoints(updated);
-  };
+  const handleRegressionSubmit = regressionForm.handleSubmit((data) => {
+    const cycles = data.dataPoints.map((p) => p.cycle);
+    const times = data.dataPoints.map((p) => p.time);
+    const result = calculateRegressionMethod({ cycles, times });
+    setRegressionResult(result);
+  });
 
   const closestPreset = useMemo(() => {
     if (!twoPointResult) return null;
@@ -130,6 +84,20 @@ export function LearningCurvesCalculator() {
       Math.abs(curr.value - rate) < Math.abs(prev.value - rate) ? curr : prev
     );
   }, [twoPointResult]);
+
+  const twoPointPrediction = useMemo(() => {
+    if (!twoPointResult) return null;
+    const cycle = twoPointForm.watch("predictionCycle");
+    if (!cycle || cycle < 1) return null;
+    return predictTimeAtCycle(cycle, twoPointResult.firstUnitValue, twoPointResult.exponent);
+  }, [twoPointResult, twoPointForm.watch("predictionCycle")]);
+
+  const regressionPrediction = useMemo(() => {
+    if (!regressionResult) return null;
+    const cycle = regressionForm.watch("predictionCycle");
+    if (!cycle || cycle < 1) return null;
+    return predictTimeAtCycle(cycle, regressionResult.firstUnitValue, regressionResult.exponent);
+  }, [regressionResult, regressionForm.watch("predictionCycle")]);
 
   return (
     <div className="space-y-6">
@@ -145,8 +113,11 @@ export function LearningCurvesCalculator() {
           <p className="text-sm text-muted-foreground">
             The more a worker performs a task, the quicker the worker becomes. Learning curves
             model this improvement using the equation{" "}
-            <span className="font-mono">Y = aX<sup>b</sup></span>, where Y is time per unit, X is
-            the unit number, a is the first unit time, and b is the learning exponent.
+            <span className="font-mono">
+              Y = aX<sup>b</sup>
+            </span>
+            , where Y is time per unit, X is the unit number, a is the first unit time, and b is
+            the learning exponent.
           </p>
         </CardContent>
       </Card>
@@ -155,14 +126,20 @@ export function LearningCurvesCalculator() {
       <div className="flex gap-4">
         <Button
           variant={mode === "two-point" ? "default" : "outline"}
-          onClick={() => setMode("two-point")}
+          onClick={() => {
+            setMode("two-point");
+            setTwoPointResult(null);
+          }}
           className="flex-1"
         >
           Two-Point Method
         </Button>
         <Button
           variant={mode === "regression" ? "default" : "outline"}
-          onClick={() => setMode("regression")}
+          onClick={() => {
+            setMode("regression");
+            setRegressionResult(null);
+          }}
           className="flex-1"
         >
           Regression Method
@@ -171,376 +148,241 @@ export function LearningCurvesCalculator() {
 
       {/* Two-Point Method */}
       {mode === "two-point" && (
-        <Card>
-          <CardHeader className="pb-4">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <span className="text-primary">Two-Point Method</span>
-            </CardTitle>
-            <p className="text-sm text-muted-foreground">
-              Calculate the learning curve equation from two data points. Enter cycle numbers and
-              their corresponding times.
-            </p>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {/* First Point */}
-            <div className="space-y-3">
-              <Label className="text-base font-semibold">First Data Point</Label>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="grid gap-1.5">
-                  <Label htmlFor="tp-x1">Cycle Number</Label>
-                  <Input
-                    id="tp-x1"
-                    type="number"
-                    min="1"
-                    step="1"
-                    placeholder="50"
-                    value={twoPointInputs.x1}
-                    onChange={(e) =>
-                      setTwoPointInputs((prev) => ({ ...prev, x1: e.target.value }))
-                    }
-                    aria-describedby="tp-x1-hint"
-                  />
-                  <p id="tp-x1-hint" className="text-xs text-muted-foreground">
-                    Unit/cycle number for first observation
-                  </p>
-                </div>
-                <div className="grid gap-1.5">
-                  <Label htmlFor="tp-y1">Time (minutes)</Label>
-                  <Input
-                    id="tp-y1"
-                    type="number"
-                    min="0.01"
-                    step="0.01"
-                    placeholder="20"
-                    value={twoPointInputs.y1}
-                    onChange={(e) =>
-                      setTwoPointInputs((prev) => ({ ...prev, y1: e.target.value }))
-                    }
-                    aria-describedby="tp-y1-hint"
-                  />
-                  <p id="tp-y1-hint" className="text-xs text-muted-foreground">
-                    Time per unit at this cycle
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Second Point */}
-            <div className="space-y-3">
-              <Label className="text-base font-semibold">Second Data Point</Label>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="grid gap-1.5">
-                  <Label htmlFor="tp-x2">Cycle Number</Label>
-                  <Input
-                    id="tp-x2"
-                    type="number"
-                    min="1"
-                    step="1"
-                    placeholder="100"
-                    value={twoPointInputs.x2}
-                    onChange={(e) =>
-                      setTwoPointInputs((prev) => ({ ...prev, x2: e.target.value }))
-                    }
-                    aria-describedby="tp-x2-hint"
-                  />
-                  <p id="tp-x2-hint" className="text-xs text-muted-foreground">
-                    Must be greater than first cycle
-                  </p>
-                </div>
-                <div className="grid gap-1.5">
-                  <Label htmlFor="tp-y2">Time (minutes)</Label>
-                  <Input
-                    id="tp-y2"
-                    type="number"
-                    min="0.01"
-                    step="0.01"
-                    placeholder="15"
-                    value={twoPointInputs.y2}
-                    onChange={(e) =>
-                      setTwoPointInputs((prev) => ({ ...prev, y2: e.target.value }))
-                    }
-                    aria-describedby="tp-y2-hint"
-                  />
-                  <p id="tp-y2-hint" className="text-xs text-muted-foreground">
-                    Should be less than first time
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <Separator />
-
-            {/* Prediction Input */}
-            <div className="grid gap-1.5">
-              <Label htmlFor="tp-predict">Predict Time at Cycle</Label>
-              <Input
-                id="tp-predict"
-                type="number"
-                min="1"
-                step="1"
-                placeholder="200"
-                value={twoPointInputs.predictCycle}
-                onChange={(e) =>
-                  setTwoPointInputs((prev) => ({ ...prev, predictCycle: e.target.value }))
-                }
-                aria-describedby="tp-predict-hint"
-              />
-              <p id="tp-predict-hint" className="text-xs text-muted-foreground">
-                Optional: Calculate predicted time for a specific cycle
-              </p>
-            </div>
-
-            <Button
-              onClick={handleCalculateTwoPoint}
-              className="w-full"
-              data-testid="calculate-two-point"
-            >
-              <Calculator className="mr-2 h-4 w-4" aria-hidden="true" />
-              Calculate Learning Curve
-            </Button>
-
-            {twoPointError && (
-              <div
-                className="p-4 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-sm"
-                role="alert"
-              >
-                {twoPointError}
-              </div>
-            )}
-
-            {twoPointResult && !twoPointError && (
-              <div
-                className="p-4 rounded-lg bg-primary/10 border border-primary/20 space-y-4"
-                role="status"
-                aria-live="polite"
-                data-testid="two-point-result"
-              >
-                <div className="text-sm text-muted-foreground mb-1">Learning Curve Results</div>
-
+        <form onSubmit={handleTwoPointSubmit}>
+          <FormFrame
+            title="Two-Point Method"
+            description="Calculate the learning curve equation from two data points. Enter cycle numbers and their corresponding times."
+          >
+            <div className="space-y-6">
+              {/* First Point */}
+              <div className="space-y-3">
+                <p className="text-base font-semibold">First Data Point</p>
                 <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <div className="text-sm text-muted-foreground">Learning Rate</div>
-                    <div className="text-2xl font-bold text-primary">
-                      {twoPointResult.learningRatePercent.toFixed(1)}%
-                    </div>
-                    {closestPreset && (
-                      <div className="text-xs text-muted-foreground">{closestPreset.label}</div>
-                    )}
-                  </div>
-                  <div>
-                    <div className="text-sm text-muted-foreground">Learning Exponent (b)</div>
-                    <div className="text-2xl font-bold text-primary font-mono">
-                      {formatExponent(twoPointResult.exponent)}
-                    </div>
-                  </div>
+                  <FormInput
+                    label="Cycle Number"
+                    type="number"
+                    hint="Unit/cycle number for first observation"
+                    error={twoPointForm.formState.errors.x1?.message}
+                    {...twoPointForm.register("x1", { valueAsNumber: true })}
+                  />
+                  <FormInput
+                    label="Time"
+                    type="number"
+                    unit="minutes"
+                    step="0.01"
+                    hint="Time per unit at this cycle"
+                    error={twoPointForm.formState.errors.y1?.message}
+                    {...twoPointForm.register("y1", { valueAsNumber: true })}
+                  />
                 </div>
-
-                <div>
-                  <div className="text-sm text-muted-foreground">First Unit Time (a)</div>
-                  <div className="text-xl font-semibold">
-                    {twoPointResult.firstUnitValue.toFixed(2)} minutes
-                  </div>
-                </div>
-
-                <div className="p-3 rounded bg-background/50">
-                  <div className="text-sm text-muted-foreground">Learning Curve Equation</div>
-                  <div className="font-mono text-lg">
-                    Y = {twoPointResult.firstUnitValue.toFixed(2)} × X
-                    <sup>{formatExponent(twoPointResult.exponent)}</sup>
-                  </div>
-                </div>
-
-                {twoPointPrediction !== null && (
-                  <div className="p-3 rounded bg-secondary/20 border border-secondary/30">
-                    <div className="text-sm text-muted-foreground">
-                      Predicted Time at Cycle {twoPointInputs.predictCycle}
-                    </div>
-                    <div className="text-xl font-bold text-secondary">
-                      {twoPointPrediction.toFixed(2)} minutes
-                    </div>
-                  </div>
-                )}
               </div>
-            )}
-          </CardContent>
-        </Card>
+
+              {/* Second Point */}
+              <div className="space-y-3">
+                <p className="text-base font-semibold">Second Data Point</p>
+                <div className="grid grid-cols-2 gap-4">
+                  <FormInput
+                    label="Cycle Number"
+                    type="number"
+                    hint="Must be greater than first cycle"
+                    error={twoPointForm.formState.errors.x2?.message}
+                    {...twoPointForm.register("x2", { valueAsNumber: true })}
+                  />
+                  <FormInput
+                    label="Time"
+                    type="number"
+                    unit="minutes"
+                    step="0.01"
+                    hint="Should be less than first time"
+                    error={twoPointForm.formState.errors.y2?.message}
+                    {...twoPointForm.register("y2", { valueAsNumber: true })}
+                  />
+                </div>
+              </div>
+
+              <div className="border-t pt-4">
+                <FormInput
+                  label="Predict Time at Cycle"
+                  type="number"
+                  hint="Optional: Calculate predicted time for a specific cycle"
+                  error={twoPointForm.formState.errors.predictionCycle?.message}
+                  {...twoPointForm.register("predictionCycle", { valueAsNumber: true })}
+                />
+              </div>
+
+              <CalculateButton type="submit" data-testid="calculate-two-point">
+                Calculate Learning Curve
+              </CalculateButton>
+
+              {twoPointResult && (
+                <ResultsDisplay
+                  status="success"
+                  items={[
+                    {
+                      label: "Learning Rate",
+                      value: `${twoPointResult.learningRatePercent.toFixed(1)}%`,
+                      description: closestPreset?.label,
+                    },
+                    {
+                      label: "Learning Exponent (b)",
+                      value: formatExponent(twoPointResult.exponent),
+                      monospace: true,
+                    },
+                    {
+                      label: "First Unit Time (a)",
+                      value: `${twoPointResult.firstUnitValue.toFixed(2)} minutes`,
+                    },
+                    {
+                      label: "Learning Curve Equation",
+                      value: `Y = ${twoPointResult.firstUnitValue.toFixed(2)} × X^${formatExponent(twoPointResult.exponent)}`,
+                      monospace: true,
+                    },
+                    ...(twoPointPrediction !== null
+                      ? [
+                          {
+                            label: `Predicted Time at Cycle ${twoPointForm.watch("predictionCycle")}`,
+                            value: `${twoPointPrediction.toFixed(2)} minutes`,
+                          },
+                        ]
+                      : []),
+                  ]}
+                  data-testid="two-point-result"
+                />
+              )}
+            </div>
+          </FormFrame>
+        </form>
       )}
 
       {/* Regression Method */}
       {mode === "regression" && (
-        <Card>
-          <CardHeader className="pb-4">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <span className="text-primary">Regression Method</span>
-            </CardTitle>
-            <p className="text-sm text-muted-foreground">
-              Estimate a learning curve equation from a series of data using the least squares
-              method. Add multiple data points for better accuracy.
-            </p>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {/* Data Points */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <Label className="text-base font-semibold">Data Points</Label>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={addDataPoint}
-                  data-testid="add-data-point"
-                >
-                  <Plus className="h-4 w-4 mr-1" aria-hidden="true" />
-                  Add Point
-                </Button>
-              </div>
-
-              <div className="space-y-2" role="list" aria-label="Data points for regression">
-                {dataPoints.map((point, index) => (
-                  <div
-                    key={index}
-                    className="flex items-center gap-2"
-                    role="listitem"
-                    aria-label={`Data point ${index + 1}`}
+        <form onSubmit={handleRegressionSubmit}>
+          <FormFrame
+            title="Regression Method"
+            description="Estimate a learning curve equation from a series of data using the least squares method. Add multiple data points for better accuracy."
+          >
+            <div className="space-y-6">
+              {/* Data Points */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-base font-semibold">Data Points</p>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => append({ cycle: 0, time: 0 })}
+                    data-testid="add-data-point"
                   >
-                    <span className="text-sm text-muted-foreground w-8">
-                      {index + 1}.
-                    </span>
-                    <div className="flex-1 grid grid-cols-2 gap-2">
-                      <Input
-                        type="number"
-                        min="1"
-                        step="1"
-                        placeholder="Cycle"
-                        value={point.cycle}
-                        onChange={(e) => updateDataPoint(index, "cycle", e.target.value)}
-                        aria-label={`Cycle number for point ${index + 1}`}
-                      />
-                      <Input
-                        type="number"
-                        min="0.01"
-                        step="0.01"
-                        placeholder="Time"
-                        value={point.time}
-                        onChange={(e) => updateDataPoint(index, "time", e.target.value)}
-                        aria-label={`Time for point ${index + 1}`}
-                      />
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => removeDataPoint(index)}
-                      disabled={dataPoints.length <= 2}
-                      aria-label={`Remove data point ${index + 1}`}
+                    <Plus className="h-4 w-4 mr-1" aria-hidden="true" />
+                    Add Point
+                  </Button>
+                </div>
+
+                <div className="space-y-2" role="list" aria-label="Data points for regression">
+                  {fields.map((field, index) => (
+                    <div
+                      key={field.id}
+                      className="flex items-center gap-2"
+                      role="listitem"
+                      aria-label={`Data point ${index + 1}`}
                     >
-                      <Trash2 className="h-4 w-4" aria-hidden="true" />
-                    </Button>
-                  </div>
-                ))}
+                      <span className="text-sm text-muted-foreground w-8">{index + 1}.</span>
+                      <div className="flex-1 grid grid-cols-2 gap-2">
+                        <FormInput
+                          type="number"
+                          placeholder="Cycle"
+                          error={
+                            regressionForm.formState.errors.dataPoints?.[index]?.cycle?.message
+                          }
+                          {...regressionForm.register(`dataPoints.${index}.cycle`, {
+                            valueAsNumber: true,
+                          })}
+                          aria-label={`Cycle number for point ${index + 1}`}
+                        />
+                        <FormInput
+                          type="number"
+                          placeholder="Time"
+                          step="0.01"
+                          error={regressionForm.formState.errors.dataPoints?.[index]?.time?.message}
+                          {...regressionForm.register(`dataPoints.${index}.time`, {
+                            valueAsNumber: true,
+                          })}
+                          aria-label={`Time for point ${index + 1}`}
+                        />
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => remove(index)}
+                        disabled={fields.length <= 2}
+                        aria-label={`Remove data point ${index + 1}`}
+                      >
+                        <Trash2 className="h-4 w-4" aria-hidden="true" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Enter cycle numbers and their corresponding times. Minimum 2 points required.
+                </p>
               </div>
-              <p className="text-xs text-muted-foreground">
-                Enter cycle numbers and their corresponding times. Minimum 2 points required.
-              </p>
+
+              <div className="border-t pt-4">
+                <FormInput
+                  label="Predict Time at Cycle"
+                  type="number"
+                  hint="Optional: Calculate predicted time for a specific cycle"
+                  error={regressionForm.formState.errors.predictionCycle?.message}
+                  {...regressionForm.register("predictionCycle", { valueAsNumber: true })}
+                />
+              </div>
+
+              <CalculateButton type="submit" data-testid="calculate-regression">
+                Calculate Learning Curve
+              </CalculateButton>
+
+              {regressionResult && (
+                <ResultsDisplay
+                  status="success"
+                  items={[
+                    {
+                      label: "Learning Rate",
+                      value: `${regressionResult.learningRatePercent.toFixed(1)}%`,
+                    },
+                    {
+                      label: "Learning Exponent (b)",
+                      value: formatExponent(regressionResult.exponent),
+                      monospace: true,
+                    },
+                    {
+                      label: "First Unit Time (a)",
+                      value: `${regressionResult.firstUnitValue.toFixed(2)} minutes`,
+                    },
+                    {
+                      label: "R² (Fit Quality)",
+                      value: `${(regressionResult.rSquared * 100).toFixed(1)}%`,
+                    },
+                    {
+                      label: "Learning Curve Equation",
+                      value: `Y = ${regressionResult.firstUnitValue.toFixed(2)} × X^${formatExponent(regressionResult.exponent)}`,
+                      monospace: true,
+                    },
+                    ...(regressionPrediction !== null
+                      ? [
+                          {
+                            label: `Predicted Time at Cycle ${regressionForm.watch("predictionCycle")}`,
+                            value: `${regressionPrediction.toFixed(2)} minutes`,
+                          },
+                        ]
+                      : []),
+                  ]}
+                  data-testid="regression-result"
+                />
+              )}
             </div>
-
-            <Separator />
-
-            {/* Prediction Input */}
-            <div className="grid gap-1.5">
-              <Label htmlFor="reg-predict">Predict Time at Cycle</Label>
-              <Input
-                id="reg-predict"
-                type="number"
-                min="1"
-                step="1"
-                placeholder="16"
-                value={regressionPredictCycle}
-                onChange={(e) => setRegressionPredictCycle(e.target.value)}
-                aria-describedby="reg-predict-hint"
-              />
-              <p id="reg-predict-hint" className="text-xs text-muted-foreground">
-                Optional: Calculate predicted time for a specific cycle
-              </p>
-            </div>
-
-            <Button
-              onClick={handleCalculateRegression}
-              className="w-full"
-              data-testid="calculate-regression"
-            >
-              <Calculator className="mr-2 h-4 w-4" aria-hidden="true" />
-              Calculate Learning Curve
-            </Button>
-
-            {regressionError && (
-              <div
-                className="p-4 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-sm"
-                role="alert"
-              >
-                {regressionError}
-              </div>
-            )}
-
-            {regressionResult && !regressionError && (
-              <div
-                className="p-4 rounded-lg bg-primary/10 border border-primary/20 space-y-4"
-                role="status"
-                aria-live="polite"
-                data-testid="regression-result"
-              >
-                <div className="text-sm text-muted-foreground mb-1">Regression Results</div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <div className="text-sm text-muted-foreground">Learning Rate</div>
-                    <div className="text-2xl font-bold text-primary">
-                      {regressionResult.learningRatePercent.toFixed(1)}%
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-sm text-muted-foreground">Learning Exponent (b)</div>
-                    <div className="text-2xl font-bold text-primary font-mono">
-                      {formatExponent(regressionResult.exponent)}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <div className="text-sm text-muted-foreground">First Unit Time (a)</div>
-                    <div className="text-xl font-semibold">
-                      {regressionResult.firstUnitValue.toFixed(2)} min
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-sm text-muted-foreground">R² (Fit Quality)</div>
-                    <div className="text-xl font-semibold">
-                      {(regressionResult.rSquared * 100).toFixed(1)}%
-                    </div>
-                  </div>
-                </div>
-
-                <div className="p-3 rounded bg-background/50">
-                  <div className="text-sm text-muted-foreground">Learning Curve Equation</div>
-                  <div className="font-mono text-lg">
-                    Y = {regressionResult.firstUnitValue.toFixed(2)} × X
-                    <sup>{formatExponent(regressionResult.exponent)}</sup>
-                  </div>
-                </div>
-
-                {regressionPrediction !== null && (
-                  <div className="p-3 rounded bg-secondary/20 border border-secondary/30">
-                    <div className="text-sm text-muted-foreground">
-                      Predicted Time at Cycle {regressionPredictCycle}
-                    </div>
-                    <div className="text-xl font-bold text-secondary">
-                      {regressionPrediction.toFixed(2)} minutes
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+          </FormFrame>
+        </form>
       )}
 
       {/* Reference Table */}
@@ -565,7 +407,9 @@ export function LearningCurvesCalculator() {
                     <tr key={preset.value} className="border-b last:border-0">
                       <td className="py-2 font-semibold">{preset.value}%</td>
                       <td className="py-2 font-mono">{exp.toFixed(4)}</td>
-                      <td className="py-2 text-muted-foreground">{preset.label.split("(")[1]?.replace(")", "") || ""}</td>
+                      <td className="py-2 text-muted-foreground">
+                        {preset.label.split("(")[1]?.replace(")", "") || ""}
+                      </td>
                     </tr>
                   );
                 })}
@@ -574,6 +418,39 @@ export function LearningCurvesCalculator() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Help Panel */}
+      <HelpPanel title="Learning Curves">
+        <HelpPanel.Formula>
+          <p className="mb-2">
+            Learning curve equation: <span className="font-mono">Y = aX^b</span>
+          </p>
+          <ul className="list-disc pl-6 space-y-1">
+            <li>
+              <strong>Y</strong> = Time per unit (or cost per unit)
+            </li>
+            <li>
+              <strong>X</strong> = Unit/cycle number
+            </li>
+            <li>
+              <strong>a</strong> = Time for the first unit
+            </li>
+            <li>
+              <strong>b</strong> = Learning exponent = log(learning rate) / log(2)
+            </li>
+          </ul>
+          <p className="mt-3">
+            <strong>Learning Rate:</strong> The percentage of time required when production doubles.
+            For example, an 80% learning rate means the 2nd unit takes 80% of the time of the 1st
+            unit, the 4th takes 80% of the 2nd, etc.
+          </p>
+        </HelpPanel.Formula>
+
+        <HelpPanel.Reference>
+          Niebel, B. W., & Freivalds, A. (2009). <em>Methods, Standards, and Work Design</em> (11th
+          ed.). McGraw-Hill. Chapter 17: Learning Curves.
+        </HelpPanel.Reference>
+      </HelpPanel>
     </div>
   );
 }
