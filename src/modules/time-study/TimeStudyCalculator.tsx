@@ -1,17 +1,18 @@
-import { useState } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { Plus, Trash2, Clock, Info } from "lucide-react";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  FormInput,
+  FormSelect,
+  FormFrame,
+  CalculateButton,
+  HelpPanel,
+} from "@/components/forms";
 import { Separator } from "@/components/ui/separator";
-import { Calculator, Plus, Trash2, Clock, Info } from "lucide-react";
+import { timeStudySchema, type TimeStudyInput } from "@/schemas";
 import {
   calculateTimeStudy,
   calculateWestinghouseRating,
@@ -22,66 +23,59 @@ import {
   EFFORT_RATINGS,
   CONDITIONS_RATINGS,
   CONSISTENCY_RATINGS,
-  type SkillRating,
-  type EffortRating,
-  type ConditionsRating,
-  type ConsistencyRating,
-  type WestinghouseRating,
   type TimeStudyResult,
 } from "@/utils/calculations/time-study";
 
 export function TimeStudyCalculator() {
-  const [observations, setObservations] = useState<string[]>(["", "", "", "", ""]);
-  const [rating, setRating] = useState<WestinghouseRating>({
-    skill: "D",
-    effort: "D",
-    conditions: "D",
-    consistency: "D",
-  });
-  const [allowance, setAllowance] = useState("15");
   const [result, setResult] = useState<TimeStudyResult | null>(null);
   const [requiredSamples, setRequiredSamples] = useState<number | null>(null);
+  const [observationCount, setObservationCount] = useState(5);
 
-  const handleCalculate = () => {
-    const validObs = observations
-      .map((o) => parseFloat(o))
-      .filter((n) => !isNaN(n) && n > 0);
+  const form = useForm<TimeStudyInput>({
+    resolver: zodResolver(timeStudySchema) as any,
+    defaultValues: {
+      observations: [0, 0, 0, 0, 0],
+      rating: {
+        skill: "D",
+        effort: "D",
+        conditions: "D",
+        consistency: "D",
+      },
+      allowancePercent: 15,
+    },
+  });
 
-    if (validObs.length < 2) {
-      return;
+  // Update form observations when count changes
+  useEffect(() => {
+    const current = form.getValues("observations");
+    if (current.length < observationCount) {
+      // Add new observations
+      form.setValue("observations", [...current, ...Array(observationCount - current.length).fill(0)]);
+    } else if (current.length > observationCount) {
+      // Remove observations
+      form.setValue("observations", current.slice(0, observationCount));
     }
+  }, [observationCount, form]);
 
-    const allowancePercent = parseFloat(allowance) || 15;
-    const calcResult = calculateTimeStudy(validObs, rating, allowancePercent);
+  const handleSubmit = form.handleSubmit((data) => {
+    const validObs = data.observations.filter((n) => n > 0);
+    if (validObs.length < 2) return;
+
+    const calcResult = calculateTimeStudy(validObs, data.rating as any, data.allowancePercent!);
     setResult(calcResult);
 
-    // Calculate required sample size for ±5% accuracy at 95% confidence
     const required = calculateRequiredSampleSize(validObs, 0.05, 0.95);
     setRequiredSamples(required);
-  };
+  });
 
-  const addObservation = () => {
-    if (observations.length < 30) {
-      setObservations([...observations, ""]);
-    }
-  };
-
-  const removeObservation = (index: number) => {
-    if (observations.length > 2) {
-      setObservations(observations.filter((_, i) => i !== index));
-    }
-  };
-
-  const updateObservation = (index: number, value: string) => {
-    const updated = [...observations];
-    updated[index] = value;
-    setObservations(updated);
-  };
-
-  const currentRatingFactor = calculateWestinghouseRating(rating);
+  const currentRating = form.watch("rating");
+  const currentRatingFactor = useMemo(
+    () => calculateWestinghouseRating(currentRating),
+    [currentRating]
+  );
 
   return (
-    <div className="space-y-6">
+    <form onSubmit={handleSubmit} className="space-y-6">
       {/* Introduction */}
       <Card>
         <CardHeader className="pb-3">
@@ -100,181 +94,123 @@ export function TimeStudyCalculator() {
       </Card>
 
       {/* Observations Input */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-lg text-primary">Observations (seconds)</CardTitle>
+      <FormFrame
+        title="Observations (seconds)"
+        description="Enter observed cycle times in seconds. Minimum 2 observations required."
+      >
+        <div className="space-y-4">
+          <div className="flex justify-end gap-2">
             <Button
+              type="button"
               variant="outline"
               size="sm"
-              onClick={addObservation}
-              disabled={observations.length >= 30}
+              onClick={() => setObservationCount(Math.max(2, observationCount - 1))}
+              disabled={observationCount <= 2}
+            >
+              <Trash2 className="h-4 w-4 mr-1" />
+              Remove
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setObservationCount(Math.min(30, observationCount + 1))}
+              disabled={observationCount >= 30}
             >
               <Plus className="h-4 w-4 mr-1" />
               Add
             </Button>
           </div>
-          <p className="text-sm text-muted-foreground">
-            Enter observed cycle times in seconds. Minimum 2 observations required.
-          </p>
-        </CardHeader>
-        <CardContent className="space-y-4">
+
           <div className="grid grid-cols-5 gap-2">
-            {observations.map((obs, index) => (
-              <div key={index} className="relative">
-                <Input
-                  type="number"
-                  min="0"
-                  step="0.1"
-                  placeholder={`#${index + 1}`}
-                  value={obs}
-                  onChange={(e) => updateObservation(index, e.target.value)}
-                  className="pr-8"
-                />
-                {observations.length > 2 && (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="absolute right-0 top-0 h-full w-8 opacity-50 hover:opacity-100"
-                    onClick={() => removeObservation(index)}
-                  >
-                    <Trash2 className="h-3 w-3" />
-                  </Button>
-                )}
-              </div>
+            {Array.from({ length: observationCount }).map((_, index) => (
+              <FormInput
+                key={index}
+                label=""
+                type="number"
+                step="0.1"
+                placeholder={`#${index + 1}`}
+                error={form.formState.errors.observations?.[index]?.message}
+                {...form.register(`observations.${index}`, { valueAsNumber: true })}
+              />
             ))}
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </FormFrame>
 
       {/* Westinghouse Rating */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg text-primary">Westinghouse Performance Rating</CardTitle>
-          <p className="text-sm text-muted-foreground">
-            Rate the observed worker's performance compared to a normal qualified operator.
-          </p>
-        </CardHeader>
-        <CardContent className="space-y-4">
+      <FormFrame
+        title="Westinghouse Performance Rating"
+        description="Rate the observed worker's performance compared to a normal qualified operator."
+      >
+        <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Skill */}
-            <div className="space-y-2">
-              <Label>Skill</Label>
-              <Select
-                value={rating.skill}
-                onValueChange={(v) => setRating({ ...rating, skill: v as SkillRating })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(SKILL_RATINGS).map(([key, { label, value }]) => (
-                    <SelectItem key={key} value={key}>
-                      {key} - {label} ({value >= 0 ? "+" : ""}{(value * 100).toFixed(0)}%)
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            <FormSelect
+              label="Skill"
+              value={currentRating.skill}
+              onValueChange={(v) => form.setValue("rating.skill", v as any)}
+              options={Object.entries(SKILL_RATINGS).map(([key, { label, value }]) => ({
+                value: key,
+                label: `${key} - ${label} (${value >= 0 ? "+" : ""}${(value * 100).toFixed(0)}%)`,
+              }))}
+              error={form.formState.errors.rating?.skill?.message}
+            />
 
-            {/* Effort */}
-            <div className="space-y-2">
-              <Label>Effort</Label>
-              <Select
-                value={rating.effort}
-                onValueChange={(v) => setRating({ ...rating, effort: v as EffortRating })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(EFFORT_RATINGS).map(([key, { label, value }]) => (
-                    <SelectItem key={key} value={key}>
-                      {key} - {label} ({value >= 0 ? "+" : ""}{(value * 100).toFixed(0)}%)
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            <FormSelect
+              label="Effort"
+              value={currentRating.effort}
+              onValueChange={(v) => form.setValue("rating.effort", v as any)}
+              options={Object.entries(EFFORT_RATINGS).map(([key, { label, value }]) => ({
+                value: key,
+                label: `${key} - ${label} (${value >= 0 ? "+" : ""}${(value * 100).toFixed(0)}%)`,
+              }))}
+              error={form.formState.errors.rating?.effort?.message}
+            />
 
-            {/* Conditions */}
-            <div className="space-y-2">
-              <Label>Conditions</Label>
-              <Select
-                value={rating.conditions}
-                onValueChange={(v) => setRating({ ...rating, conditions: v as ConditionsRating })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(CONDITIONS_RATINGS).map(([key, { label, value }]) => (
-                    <SelectItem key={key} value={key}>
-                      {key} - {label} ({value >= 0 ? "+" : ""}{(value * 100).toFixed(0)}%)
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            <FormSelect
+              label="Conditions"
+              value={currentRating.conditions}
+              onValueChange={(v) => form.setValue("rating.conditions", v as any)}
+              options={Object.entries(CONDITIONS_RATINGS).map(([key, { label, value }]) => ({
+                value: key,
+                label: `${key} - ${label} (${value >= 0 ? "+" : ""}${(value * 100).toFixed(0)}%)`,
+              }))}
+              error={form.formState.errors.rating?.conditions?.message}
+            />
 
-            {/* Consistency */}
-            <div className="space-y-2">
-              <Label>Consistency</Label>
-              <Select
-                value={rating.consistency}
-                onValueChange={(v) => setRating({ ...rating, consistency: v as ConsistencyRating })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(CONSISTENCY_RATINGS).map(([key, { label, value }]) => (
-                    <SelectItem key={key} value={key}>
-                      {key} - {label} ({value >= 0 ? "+" : ""}{(value * 100).toFixed(0)}%)
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            <FormSelect
+              label="Consistency"
+              value={currentRating.consistency}
+              onValueChange={(v) => form.setValue("rating.consistency", v as any)}
+              options={Object.entries(CONSISTENCY_RATINGS).map(([key, { label, value }]) => ({
+                value: key,
+                label: `${key} - ${label} (${value >= 0 ? "+" : ""}${(value * 100).toFixed(0)}%)`,
+              }))}
+              error={form.formState.errors.rating?.consistency?.message}
+            />
           </div>
 
           <div className="p-3 rounded-lg bg-muted text-center">
             <div className="text-sm text-muted-foreground">Combined Rating Factor</div>
-            <div className="text-2xl font-bold">
-              {(currentRatingFactor * 100).toFixed(0)}%
-            </div>
+            <div className="text-2xl font-bold">{(currentRatingFactor * 100).toFixed(0)}%</div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </FormFrame>
 
       {/* Allowances */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-lg text-primary">Allowances</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="allowance">Personal, Fatigue & Delay (PFD) Allowance (%)</Label>
-            <Input
-              id="allowance"
-              type="number"
-              min="0"
-              max="50"
-              value={allowance}
-              onChange={(e) => setAllowance(e.target.value)}
-              className="max-w-xs"
-            />
-            <p className="text-xs text-muted-foreground">
-              Typical values: 10-15% for light work, 15-20% for heavy work
-            </p>
-          </div>
+      <FormFrame title="Allowances">
+        <FormInput
+          label="Personal, Fatigue & Delay (PFD) Allowance"
+          type="number"
+          unit="%"
+          hint="Typical values: 10-15% for light work, 15-20% for heavy work"
+          error={form.formState.errors.allowancePercent?.message}
+          {...form.register("allowancePercent", { valueAsNumber: true })}
+          className="max-w-xs"
+        />
 
-          <Button onClick={handleCalculate} className="w-full md:w-auto">
-            <Calculator className="mr-2 h-4 w-4" />
-            Calculate Standard Time
-          </Button>
-        </CardContent>
-      </Card>
+        <CalculateButton type="submit">Calculate Standard Time</CalculateButton>
+      </FormFrame>
 
       {/* Results */}
       {result && (
@@ -374,7 +310,7 @@ export function TimeStudyCalculator() {
                 <p>Observed Time (OT) = {result.observedTime.toFixed(3)} sec</p>
                 <p>Rating Factor = {(result.ratingFactor * 100).toFixed(0)}%</p>
                 <p>Normal Time (NT) = OT × Rating = {result.observedTime.toFixed(3)} × {result.ratingFactor.toFixed(2)} = {result.normalTime.toFixed(3)} sec</p>
-                <p>Allowance Factor = 1 + {allowance}% = {result.allowanceFactor.toFixed(2)}</p>
+                <p>Allowance Factor = 1 + {form.watch("allowancePercent")}% = {result.allowanceFactor.toFixed(2)}</p>
                 <p>Standard Time (ST) = NT × Allowance = {result.normalTime.toFixed(3)} × {result.allowanceFactor.toFixed(2)} = {result.standardTime.toFixed(3)} sec</p>
               </div>
             </div>
@@ -399,11 +335,15 @@ export function TimeStudyCalculator() {
               <tbody className="text-muted-foreground">
                 <tr className="border-b">
                   <td className="py-2 font-medium text-foreground">Skill</td>
-                  <td className="py-2">Proficiency following a method; dexterity and coordination</td>
+                  <td className="py-2">
+                    Proficiency following a method; dexterity and coordination
+                  </td>
                 </tr>
                 <tr className="border-b">
                   <td className="py-2 font-medium text-foreground">Effort</td>
-                  <td className="py-2">Demonstration of will to work effectively; speed and energy</td>
+                  <td className="py-2">
+                    Demonstration of will to work effectively; speed and energy
+                  </td>
                 </tr>
                 <tr className="border-b">
                   <td className="py-2 font-medium text-foreground">Conditions</td>
@@ -418,6 +358,29 @@ export function TimeStudyCalculator() {
           </div>
         </CardContent>
       </Card>
-    </div>
+
+      {/* Help Panel */}
+      <HelpPanel title="Time Study">
+        <HelpPanel.Formula>
+          <div className="space-y-2">
+            <p>
+              <strong>Standard Time (ST)</strong> = Normal Time × (1 + Allowance%)
+            </p>
+            <p>
+              <strong>Normal Time (NT)</strong> = Observed Time × Rating Factor
+            </p>
+            <p>
+              <strong>Rating Factor</strong> = 1 + Σ(Westinghouse adjustments for skill, effort,
+              conditions, consistency)
+            </p>
+          </div>
+        </HelpPanel.Formula>
+
+        <HelpPanel.Reference>
+          Niebel, B. W., & Freivalds, A. (2009). <em>Methods, Standards, and Work Design</em> (11th
+          ed.). McGraw-Hill. Chapter 11: Performance Rating and Chapter 13: Allowances.
+        </HelpPanel.Reference>
+      </HelpPanel>
+    </form>
   );
 }
